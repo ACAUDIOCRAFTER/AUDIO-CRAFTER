@@ -565,8 +565,15 @@ do
             if p~=AC.player then
                 if q=="" or p.Name:lower():find(q,1,true) or p.DisplayName:lower():find(q,1,true) then
                     count=count+1
-                    local row=Instance.new("TextButton",ddScroll); row.Size=UDim2.new(1,0,0,36); row.BackgroundColor3=Color3.fromRGB(22,22,22); row.Text=""; row.Name=p.Name; row.ZIndex=502; Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
-                    local nl=Instance.new("TextLabel",row); nl.Size=UDim2.new(1,-16,1,0); nl.Position=UDim2.new(0,10,0,0); nl.BackgroundTransparency=1; nl.Text=p.Name; nl.TextColor3=AC.TXT_WHITE; nl.TextSize=13; nl.Font=Enum.Font.GothamBold; nl.TextXAlignment=Enum.TextXAlignment.Left; nl.ZIndex=503
+                    local row=Instance.new("TextButton",ddScroll)
+                    row.Size=UDim2.new(1,0,0,36); row.BackgroundColor3=Color3.fromRGB(22,22,22)
+                    row.Text=p.Name; row.Name=p.Name; row.ZIndex=502
+                    row.TextColor3=AC.TXT_WHITE; row.TextSize=13; row.Font=Enum.Font.GothamBold
+                    row.TextXAlignment=Enum.TextXAlignment.Left
+                    row.AutoButtonColor=false
+                    local _pad=Instance.new("UIPadding",row); _pad.PaddingLeft=UDim.new(0,10)
+                    Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
+                    local nl=row  -- nl IS the row now, no separate label needed
                     local pCopy=p
                     row.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then ddSelecting=true end end)
                     row.MouseButton1Click:Connect(function()
@@ -708,20 +715,37 @@ do
 
     local function fetchRnAnimList(cb)
         task.spawn(function()
+            -- Try GitHub API first
             local ok, res = pcall(function() return game:HttpGet(RN_API_URL) end)
-            if ok and res and res ~= "" then
-                local parsed = AC.Http:JSONDecode(res)
-                local list = {}
-                for _, entry in ipairs(parsed) do
-                    if type(entry.name) == "string" and entry.name:sub(-4)==".lua" then
-                        local name = entry.name:sub(1, -5)  -- strip .lua
-                        -- URL-encode spaces → %20
-                        local encoded = entry.name:gsub(" ", "%%20"):gsub("'", "%%27")
-                        list[#list+1] = {name, RN_BASE_URL .. encoded}
+            if ok and res and res ~= "" and res:sub(1,1) == "[" then
+                local pOk, parsed = pcall(function() return AC.Http:JSONDecode(res) end)
+                if pOk and parsed and type(parsed)=="table" then
+                    local list = {}
+                    for _, entry in ipairs(parsed) do
+                        if type(entry) == "table" and type(entry.name) == "string"
+                            and entry.name:sub(-4)==".lua"
+                            and entry.type == "file" then
+                            local name = entry.name:sub(1, -5)
+                            -- Proper URL encoding
+                            local encoded = entry.name
+                                :gsub("%%", "%%25")
+                                :gsub(" ", "%%20")
+                                :gsub("'", "%%27")
+                                :gsub("%(", "%%28")
+                                :gsub("%)", "%%29")
+                                :gsub("!", "%%21")
+                                :gsub("#", "%%23")
+                            list[#list+1] = {name, RN_BASE_URL .. encoded}
+                        end
+                    end
+                    if #list > 0 then
+                        RN_ANIMS = list
+                        cb(list)
+                        return
                     end
                 end
-                if #list > 0 then RN_ANIMS = list; cb(list); return end
             end
+            print("[AC] GitHub API unavailable or rate-limited, using fallback list")
             -- Fallback: hardcoded popular 50 from the repo
             RN_ANIMS = {
                 {"7 Rings Dance","https://raw.githubusercontent.com/Rootleak/Animations/main/7%20Rings%20Dance%2Elua"},
@@ -943,6 +967,7 @@ do
     local rnAllRows={}; local rnFavOnly=false
 
     local function buildRnRow(name,url,idx)
+        if not name or not url or not idx then return nil end  -- nil guard
         local row=Instance.new("TextButton",rnScroll); row.Size=UDim2.new(1,0,0,34); row.BackgroundColor3=Color3.fromRGB(14,14,18); row.BackgroundTransparency=0.1; row.Text=""; row.LayoutOrder=idx; row.ZIndex=72; Instance.new("UICorner",row).CornerRadius=UDim.new(0,7)
         local rS=Instance.new("UIStroke",row); rS.Color=AC.PUR_STROKE; rS.Thickness=1; rS.Transparency=0.7
         local idxStr=tostring(idx)
@@ -1027,7 +1052,9 @@ do
     task.spawn(function()
         fetchRnAnimList(function(list)
             for i,a in ipairs(list) do
-                rnAllRows[i]=buildRnRow(a[1],a[2],i)
+                if a and a[1] and a[2] then
+                    rnAllRows[i]=buildRnRow(a[1],a[2],i)
+                end
                 if i%20==0 then
                     rnScroll.CanvasSize=UDim2.new(0,0,0,i*36+8)
                     task.wait()
@@ -1059,7 +1086,18 @@ do
         local ok2,kn=pcall(function() return inp.KeyCode.Name end); if not ok2 or not kn then return end
         if rnActive then
             for idxStr,bk in pairs(rnBinds) do
-                if bk==kn then local idx=tonumber(idxStr); if idx and RN_ANIMS[idx] then ensureAPI(function(api) pcall(function() api.play_animation(RN_ANIMS[idx][2],rnSpeeds[idxStr] or 1.0) end); AC.toast("♪ "..RN_ANIMS[idx][1],AC.PUR_BRIGHT) end) end end end
+                if bk==kn then
+                    -- Use row data (not RN_ANIMS index) since list is dynamic
+                    for _,r in ipairs(rnAllRows) do
+                        if r and tostring(r.index)==idxStr then
+                            ensureAPI(function(api)
+                                pcall(function() api.play_animation(r.url, rnSpeeds[idxStr] or 1.0) end)
+                                AC.toast("♪ "..r.nameLower,AC.PUR_BRIGHT)
+                            end)
+                            break
+                        end
+                    end
+                end end end
         end
     end)
 
@@ -1187,7 +1225,18 @@ end)
 
     local ugcAllRows={}; local ugcFavOnly=false; local ugcHighRow=nil
 
-    local function stopUgcTrack() if ugcActiveTrack then pcall(function() ugcActiveTrack:Stop() end); ugcActiveTrack=nil end end
+    local ugcLoadedTracks = {}  -- track ALL loaded animations to clean up
+    local function stopUgcTrack()
+        if ugcActiveTrack then
+            pcall(function() ugcActiveTrack:Stop(); ugcActiveTrack:Destroy() end)
+            ugcActiveTrack=nil
+        end
+        -- Clean up all loaded tracks to avoid hitting the 32-track limit
+        for _,t in ipairs(ugcLoadedTracks) do
+            pcall(function() if t and t.IsPlaying then t:Stop() end; t:Destroy() end)
+        end
+        ugcLoadedTracks={}
+    end
 
     local function playUgcEmote(id)
         stopUgcTrack()
@@ -1198,7 +1247,7 @@ end)
         local animator=hum:FindFirstChildOfClass("Animator"); if not animator then return end
         local anim=Instance.new("Animation"); anim.AnimationId="rbxassetid://"..tostring(id)
         local ok2,t2=pcall(function() return animator:LoadAnimation(anim) end)
-        if ok2 and t2 then t2.Priority=Enum.AnimationPriority.Action; t2.Looped=true; t2:Play(); pcall(function() t2:AdjustSpeed(ugcSpdCur) end); ugcActiveTrack=t2 end
+        if ok2 and t2 then t2.Priority=Enum.AnimationPriority.Action; t2.Looped=true; t2:Play(); pcall(function() t2:AdjustSpeed(ugcSpdCur) end); ugcActiveTrack=t2; table.insert(ugcLoadedTracks,t2) end
     end
 
 
@@ -1341,6 +1390,8 @@ end)
             local CHUNK=10
             for i=1,#emotes do
                 ugcAllRows[i]=buildUgcRow(emotes[i],i)
+                -- Apply current tab filter immediately
+                if ugcFavOnly then ugcAllRows[i].row.Visible = ugcFavs[tostring(emotes[i].id)] == true end
                 if i%CHUNK==0 then
                     -- Update canvas size after each chunk
                     ugcScroll.CanvasSize=UDim2.new(0,0,0,i*36+8)
