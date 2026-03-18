@@ -1,9 +1,5 @@
--- AC AudioCrafter V3.1 — Part 1 of 2
--- See part 2 for qBar, open animation, and command handler completion
--- Paste BOTH parts together in order
-
 -- ╔══════════════════════════════════════════════════════╗
--- ║  AC | AudioCrafter  V3.0                            ║
+-- ║  AC | AudioCrafter  V3.1                            ║
 -- ║  Made by MelodyCrafter                              ║
 -- ╚══════════════════════════════════════════════════════╝
 -- CHANGES v3.1:
