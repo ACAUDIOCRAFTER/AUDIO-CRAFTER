@@ -214,10 +214,32 @@ do
         local knob=Instance.new("TextButton",trk); knob.Size=UDim2.new(0,14,0,14); knob.Position=UDim2.new((def-mn)/(mx-mn),0,0.5,-7); knob.BackgroundColor3=AC.PUR_GLOW; knob.Text=""; Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
         local dragging=false; local cbs={}; local vRef={v=def}
         local function setV(r) r=math.clamp(r,0,1); vRef.v=math.floor(mn+r*(mx-mn)+0.5); vLbl.Text=tostring(vRef.v)..sfx; fill.Size=UDim2.new(r,0,1,0); knob.Position=UDim2.new(r,-7,0.5,-7); for _,cb in ipairs(cbs) do pcall(cb,vRef.v) end end
-        knob.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true end end)
-        trk.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true; setV((AC.UIS:GetMouseLocation().X-trk.AbsolutePosition.X)/trk.AbsoluteSize.X) end end)
-        AC.UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end end)
-        AC.RS.RenderStepped:Connect(function() if dragging then setV((AC.UIS:GetMouseLocation().X-trk.AbsolutePosition.X)/trk.AbsoluteSize.X) end end)
+        local dragConn=nil
+        knob.InputBegan:Connect(function(i)
+            if i.UserInputType==Enum.UserInputType.MouseButton1 then
+                dragging=true
+                dragConn=AC.RS.RenderStepped:Connect(function()
+                    setV((AC.UIS:GetMouseLocation().X-trk.AbsolutePosition.X)/trk.AbsoluteSize.X)
+                end)
+            end
+        end)
+        trk.InputBegan:Connect(function(i)
+            if i.UserInputType==Enum.UserInputType.MouseButton1 then
+                dragging=true
+                setV((AC.UIS:GetMouseLocation().X-trk.AbsolutePosition.X)/trk.AbsoluteSize.X)
+                if not dragConn then
+                    dragConn=AC.RS.RenderStepped:Connect(function()
+                        setV((AC.UIS:GetMouseLocation().X-trk.AbsolutePosition.X)/trk.AbsoluteSize.X)
+                    end)
+                end
+            end
+        end)
+        AC.UIS.InputEnded:Connect(function(i)
+            if i.UserInputType==Enum.UserInputType.MouseButton1 then
+                dragging=false
+                if dragConn then dragConn:Disconnect(); dragConn=nil end
+            end
+        end)
         return bg, function() return vRef.v end, function(cb) table.insert(cbs,cb) end
     end
 
@@ -348,13 +370,13 @@ do
     local div2=Instance.new("Frame",pill); div2.Size=UDim2.new(0,1,0.6,0); div2.Position=UDim2.new(0,128,0.2,0); div2.BackgroundColor3=AC.TXT_DIM; div2.BackgroundTransparency=0.5
     local pingLbl=Instance.new("TextLabel",pill); pingLbl.Size=UDim2.new(0,68,1,0); pingLbl.Position=UDim2.new(0,132,0,0); pingLbl.BackgroundTransparency=1; pingLbl.Text="PING  5ms"; pingLbl.TextColor3=AC.PUR_GLOW; pingLbl.TextSize=11; pingLbl.Font=Enum.Font.GothamBold; pingLbl.ZIndex=301
     local fpsF,fpsT={},0
+    local _fpsRunSum=0  -- running sum to avoid ipairs each update
     AC.RS.RenderStepped:Connect(function(dt)
-        fpsF[#fpsF+1]=dt; fpsT=fpsT+dt
+        fpsF[#fpsF+1]=dt; fpsT=fpsT+dt; _fpsRunSum=_fpsRunSum+dt
         if fpsT>=0.5 and #fpsF>0 then
-            local sum=0; for _,v in ipairs(fpsF) do sum=sum+v end
-            local avg=sum/#fpsF; local fps=avg>0 and math.floor(1/avg+0.5) or 0
+            local avg=_fpsRunSum/#fpsF; local fps=avg>0 and math.floor(1/avg+0.5) or 0
             fpsLbl.Text="FPS  "..fps; fpsLbl.TextColor3=fps>=55 and AC.GREEN_OK or fps>=30 and AC.ORANGE_W or AC.RED_ERR
-            fpsF={}; fpsT=0
+            fpsF={}; fpsT=0; _fpsRunSum=0
             local ok,ping=pcall(function() return math.floor(AC.Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
             if ok then pingLbl.Text="PING  "..ping.."ms"; pingLbl.TextColor3=ping<80 and AC.PUR_GLOW or ping<150 and AC.ORANGE_W or AC.RED_ERR end
         end
@@ -423,15 +445,9 @@ do
         startTypewriter(titleLbl)
 
         -- Distance LOD + scale
-        local sc; sc=AC.RS.RenderStepped:Connect(function()
-            if not head or not head.Parent then sc:Disconnect(); return end
-            local d=(AC.camera.CFrame.Position-head.Position).Magnitude
-            local f=math.clamp(20/math.max(d,1),0.3,1.4)
-            bb.Size=UDim2.new(0,TAG_W*f,0,TAG_H*f)
-            -- LOD: hide text labels when far, show logo only
-            local showText=(d<=LOD_TEXT)
-            titleLbl.Visible=showText; userLbl.Visible=showText
-        end)
+        -- Store refs on bb for shared billboard updater
+        bb._head=head; bb._titleLbl=titleLbl; bb._userLbl=userLbl
+        bb._TW=TAG_W; bb._TH=TAG_H
 
         local click=Instance.new("TextButton",pill); click.Size=UDim2.new(1,0,1,0); click.BackgroundTransparency=1; click.Text=""
         click.MouseButton1Click:Connect(function()
@@ -488,6 +504,24 @@ do
     for _,p in ipairs(AC.Players:GetPlayers()) do watchPlayer(p) end
     AC.Players.PlayerAdded:Connect(watchPlayer)
     AC.Players.PlayerRemoving:Connect(function(p) if p.Character then local h=p.Character:FindFirstChild("Head"); if h then local bb=h:FindFirstChild("AC_Billboard"); if bb then bb:Destroy() end end end end)
+
+    -- Single shared billboard LOD updater - throttled to every 4 frames
+    local _bbFrame=0
+    AC.RS.RenderStepped:Connect(function()
+        _bbFrame=_bbFrame+1; if _bbFrame%4~=0 then return end
+        if #AC.allBillboards==0 then return end
+        local camPos=AC.camera.CFrame.Position
+        for _,bb in ipairs(AC.allBillboards) do
+            if bb and bb.Parent and bb._head and bb._head.Parent then
+                local d=(camPos-bb._head.Position).Magnitude
+                local f=math.clamp(20/math.max(d,1),0.3,1.4)
+                bb.Size=UDim2.new(0,bb._TW*f,0,bb._TH*f)
+                local show=(d<=60)
+                if bb._titleLbl then bb._titleLbl.Visible=show end
+                if bb._userLbl then bb._userLbl.Visible=show end
+            end
+        end
+    end)
 end
 
 
@@ -621,7 +655,24 @@ do
     local _,_,onIJ=AC.makeToggle(pg,"Infinite Jump",172,false)
     onIJ(function(v) if v then AC.ijConn=AC.UIS.JumpRequest:Connect(function() local h=AC.player.Character and AC.player.Character:FindFirstChildOfClass("Humanoid"); if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end) else if AC.ijConn then AC.ijConn:Disconnect(); AC.ijConn=nil end end end)
     local _,_,onNC=AC.makeToggle(pg,"Noclip",218,false)
-    onNC(function(v) if v then AC.noclipConn=AC.RS.Stepped:Connect(function() if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end end) else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end end)
+    onNC(function(v) if v then do
+        -- Cache character parts list so Stepped doesn't call GetDescendants every frame
+        local _ncParts={}
+        local function _rebuildNcParts(char)
+            _ncParts={}
+            if not char then return end
+            for _,p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then _ncParts[#_ncParts+1]=p end
+            end
+        end
+        _rebuildNcParts(AC.player.Character)
+        AC.player.CharacterAdded:Connect(function(c) task.wait() _rebuildNcParts(c) end)
+        AC.noclipConn=AC.RS.Stepped:Connect(function()
+            for _,p in ipairs(_ncParts) do
+                pcall(function() p.CanCollide=false end)
+            end
+        end)
+    end else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end end)
     local _,_,onFly=AC.makeToggle(pg,"Fly  (WASD + Q/E)",264,false)
     onFly(function(v)
         AC.flyActive=v; local char=AC.player.Character; if not char then return end
@@ -849,10 +900,32 @@ do
         rnSpdVal.Text=tostring(v); local r=v/10; rnSpdFill.Size=UDim2.new(r,0,1,0); rnSpdKnob.Position=UDim2.new(r,-7,0.5,-7)
         if rnAPI and rnActive then pcall(function() rnAPI.set_animation_speed(v) end) end
     end
-    rnSpdKnob.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then rnSpdDrag=true end end)
-    rnSpdTrack.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then rnSpdDrag=true; setRnSpd((AC.UIS:GetMouseLocation().X-rnSpdTrack.AbsolutePosition.X)/rnSpdTrack.AbsoluteSize.X*10) end end)
-    AC.UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then rnSpdDrag=false end end)
-    AC.RS.RenderStepped:Connect(function() if rnSpdDrag then setRnSpd((AC.UIS:GetMouseLocation().X-rnSpdTrack.AbsolutePosition.X)/rnSpdTrack.AbsoluteSize.X*10) end end)
+        local _rnSpdConn=nil
+    rnSpdKnob.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            rnSpdDrag=true
+            _rnSpdConn=AC.RS.RenderStepped:Connect(function()
+                setRnSpd((AC.UIS:GetMouseLocation().X-rnSpdTrack.AbsolutePosition.X)/rnSpdTrack.AbsoluteSize.X*10)
+            end)
+        end
+    end)
+    rnSpdTrack.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            rnSpdDrag=true
+            setRnSpd((AC.UIS:GetMouseLocation().X-rnSpdTrack.AbsolutePosition.X)/rnSpdTrack.AbsoluteSize.X*10)
+            if not _rnSpdConn then
+                _rnSpdConn=AC.RS.RenderStepped:Connect(function()
+                    setRnSpd((AC.UIS:GetMouseLocation().X-rnSpdTrack.AbsolutePosition.X)/rnSpdTrack.AbsoluteSize.X*10)
+                end)
+            end
+        end
+    end)
+    AC.UIS.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            rnSpdDrag=false
+            if _rnSpdConn then _rnSpdConn:Disconnect(); _rnSpdConn=nil end
+        end
+    end)
     rnRstSpd.MouseButton1Click:Connect(function() setRnSpd(5) end)
     setRnSpd(5)
 
@@ -1166,10 +1239,32 @@ end)
         local r=v/10; ugcSpVal.Text=tostring(v); ugcSpFl.Size=UDim2.new(r,0,1,0); ugcSpKn.Position=UDim2.new(r,-7,0.5,-7)
         if ugcActiveTrack then pcall(function() ugcActiveTrack:AdjustSpeed(v) end) end
     end
-    ugcSpKn.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then ugcSpdDrag=true end end)
-    ugcSpTrk.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then ugcSpdDrag=true; setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10) end end)
-    AC.UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then ugcSpdDrag=false end end)
-    AC.RS.RenderStepped:Connect(function() if ugcSpdDrag then setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10) end end)
+        local _ugcSpdDragConn=nil
+    ugcSpKn.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            ugcSpdDrag=true
+            _ugcSpdDragConn=AC.RS.RenderStepped:Connect(function()
+                setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10)
+            end)
+        end
+    end)
+    ugcSpTrk.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            ugcSpdDrag=true
+            setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10)
+            if not _ugcSpdDragConn then
+                _ugcSpdDragConn=AC.RS.RenderStepped:Connect(function()
+                    setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10)
+                end)
+            end
+        end
+    end)
+    AC.UIS.InputEnded:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            ugcSpdDrag=false
+            if _ugcSpdDragConn then _ugcSpdDragConn:Disconnect(); _ugcSpdDragConn=nil end
+        end
+    end)
     ugcSpRst.MouseButton1Click:Connect(function() setUgcSpd(5) end); setUgcSpd(5)
 
     for i,nv in ipairs(UGC_NUM_VALS) do
@@ -1301,7 +1396,19 @@ end)
         sKnb.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then stDrag=true end end)
         sTrk.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then stDrag=true; setStSpd(0.1+(AC.UIS:GetMouseLocation().X-sTrk.AbsolutePosition.X)/sTrk.AbsoluteSize.X*4.9) end end)
         AC.UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then stDrag=false end end)
-        AC.RS.RenderStepped:Connect(function() if stDrag then setStSpd(0.1+(AC.UIS:GetMouseLocation().X-sTrk.AbsolutePosition.X)/sTrk.AbsoluteSize.X*4.9) end end)
+        -- states slider: connect-on-drag only
+        local _sDC=nil
+        sKn.InputBegan:Connect(function(i)
+            if i.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+            sDrg=true
+            _sDC=AC.RS.RenderStepped:Connect(function()
+                setSSpd(0.1+(AC.UIS:GetMouseLocation().X-sTrk.AbsolutePosition.X)/sTrk.AbsoluteSize.X*4.9)
+            end)
+        end)
+        AC.UIS.InputEnded:Connect(function(i)
+            if i.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+            sDrg=false; if _sDC then _sDC:Disconnect(); _sDC=nil end
+        end)
         sRst.MouseButton1Click:Connect(function() setStSpd(1.0) end)
         setStSpd(1.0)
 
@@ -1540,7 +1647,24 @@ do
         elseif cmd==".bring" then if AC.selectedTarget and AC.selectedTarget.Character then local r=AC.selectedTarget.Character:FindFirstChild("HumanoidRootPart"); local m=AC.player.Character and AC.player.Character:FindFirstChild("HumanoidRootPart"); if r and m then r.CFrame=m.CFrame*CFrame.new(0,0,-3) end end
         elseif cmd==".cleartarget" then AC.stopViewing(); AC.focusActive=false; AC.onHead=false; AC.inBp=false; AC.selectedTarget=nil; if AC.sBox then AC.sBox.Text="" end
         elseif cmd==".fly" then if AC.flyActive then AC.flyActive=false; if AC.flyConn then AC.flyConn:Disconnect(); AC.flyConn=nil end; if AC.flyBV then AC.flyBV:Destroy(); AC.flyBV=nil end; if AC.flyBG then AC.flyBG:Destroy(); AC.flyBG=nil end; if AC._flyAtt then AC._flyAtt:Destroy(); AC._flyAtt=nil end; local h=AC.player.Character and AC.player.Character:FindFirstChildOfClass("Humanoid"); if h then h.PlatformStand=false end else AC.flyActive=true end
-        elseif cmd==".noclip" then if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end else AC.noclipConn=AC.RS.Stepped:Connect(function() if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end end) end
+        elseif cmd==".noclip" then if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end else do
+        -- Cache character parts list so Stepped doesn't call GetDescendants every frame
+        local _ncParts={}
+        local function _rebuildNcParts(char)
+            _ncParts={}
+            if not char then return end
+            for _,p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then _ncParts[#_ncParts+1]=p end
+            end
+        end
+        _rebuildNcParts(AC.player.Character)
+        AC.player.CharacterAdded:Connect(function(c) task.wait() _rebuildNcParts(c) end)
+        AC.noclipConn=AC.RS.Stepped:Connect(function()
+            for _,p in ipairs(_ncParts) do
+                pcall(function() p.CanCollide=false end)
+            end
+        end)
+    end end
         elseif cmd==".fullbright" then local v=not(AC.Lighting.Brightness>1); AC.Lighting.Brightness=v and 2 or 1; AC.Lighting.GlobalShadows=not v; AC.Lighting.Ambient=v and Color3.new(1,1,1) or Color3.fromRGB(127,127,127); AC.Lighting.OutdoorAmbient=v and Color3.new(1,1,1) or Color3.fromRGB(127,127,127)
         elseif cmd==".re" then local mr=AC.player.Character and AC.player.Character:FindFirstChild("HumanoidRootPart"); local sv=mr and mr.CFrame; if sv then local conn2; conn2=AC.player.CharacterAdded:Connect(function(nc) conn2:Disconnect(); task.wait(0.5); local mr3=nc:WaitForChild("HumanoidRootPart",5); if mr3 then mr3.CFrame=sv; AC.toast("Respawned!",AC.GREEN_OK) end end); local hh=AC.player.Character:FindFirstChildOfClass("Humanoid"); if hh then hh.Health=0 end end
         elseif cmd==".reset" then local h=AC.player.Character and AC.player.Character:FindFirstChildOfClass("Humanoid"); if h then h.Health=0 end
@@ -1583,7 +1707,24 @@ do
         else if AC.flyConn then AC.flyConn:Disconnect(); AC.flyConn=nil end; if AC.flyBV then AC.flyBV:Destroy(); AC.flyBV=nil end; if AC.flyBG then AC.flyBG:Destroy(); AC.flyBG=nil end; if AC._flyAtt then AC._flyAtt:Destroy(); AC._flyAtt=nil end; if hum then hum.PlatformStand=false end end
     end)
     makeChip("NC",140,Color3.fromRGB(200,100,10),function(v)
-        if v then AC.noclipConn=AC.RS.Stepped:Connect(function() if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=false end end end end)
+        if v then do
+        -- Cache character parts list so Stepped doesn't call GetDescendants every frame
+        local _ncParts={}
+        local function _rebuildNcParts(char)
+            _ncParts={}
+            if not char then return end
+            for _,p in ipairs(char:GetDescendants()) do
+                if p:IsA("BasePart") then _ncParts[#_ncParts+1]=p end
+            end
+        end
+        _rebuildNcParts(AC.player.Character)
+        AC.player.CharacterAdded:Connect(function(c) task.wait() _rebuildNcParts(c) end)
+        AC.noclipConn=AC.RS.Stepped:Connect(function()
+            for _,p in ipairs(_ncParts) do
+                pcall(function() p.CanCollide=false end)
+            end
+        end)
+    end
         else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end
     end)
 end
