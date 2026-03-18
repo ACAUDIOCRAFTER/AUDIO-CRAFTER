@@ -1409,37 +1409,35 @@ end)
     rnMainBtn.MouseEnter:Connect(function() AC.TS:Create(rnMainBtn,TweenInfo.new(0.15),{BackgroundColor3=AC.PUR_MID}):Play() end)
     rnMainBtn.MouseLeave:Connect(function() AC.TS:Create(rnMainBtn,TweenInfo.new(0.15),{BackgroundColor3=AC.BG_CARD}):Play() end)
     rnMainBtn.MouseButton1Click:Connect(function()
-    pcall(function() AC.clickSnd:Play() end)
-    rnPanel.Visible=not rnPanel.Visible
-    if rnPanel.Visible then
-        local vp=AC.camera.ViewportSize
-        local pos=rnPanel.Position
-        if pos.X.Offset<0 or pos.X.Offset>vp.X-50 or pos.Y.Offset<0 or pos.Y.Offset>vp.Y-50 then
-            rnPanel.Position=UDim2.new(0.5,-RN_W/2,0.5,-RN_H/2)
+        pcall(function() AC.clickSnd:Play() end)
+        rnPanel.Visible=not rnPanel.Visible
+        if rnPanel.Visible then
+            local vp=AC.camera.ViewportSize
+            local pos=rnPanel.Position
+            if pos.X.Offset<0 or pos.X.Offset>vp.X-50 or pos.Y.Offset<0 or pos.Y.Offset>vp.Y-50 then
+                rnPanel.Position=UDim2.new(0.5,-RN_W/2,0.5,-RN_H/2)
+            end
         end
-    end
-end)
+    end)
 
     AC.sectionLbl(pg,"UGC EMOTES",78)
     local ugcMainBtn=Instance.new("TextButton",pg); ugcMainBtn.Size=UDim2.new(1,-24,0,40); ugcMainBtn.Position=UDim2.new(0,12,0,96); ugcMainBtn.BackgroundColor3=AC.BG_CARD; ugcMainBtn.Text="Open Emote Menu"; ugcMainBtn.TextColor3=AC.PUR_GLOW; ugcMainBtn.TextSize=14; ugcMainBtn.Font=Enum.Font.GothamBold; Instance.new("UICorner",ugcMainBtn).CornerRadius=UDim.new(0,8); local ugcMS=Instance.new("UIStroke",ugcMainBtn); ugcMS.Color=AC.PUR_STROKE; ugcMS.Thickness=1.5; ugcMS.Transparency=0.3
     ugcMainBtn.MouseEnter:Connect(function() AC.TS:Create(ugcMainBtn,TweenInfo.new(0.15),{BackgroundColor3=AC.PUR_MID}):Play() end)
     ugcMainBtn.MouseLeave:Connect(function() AC.TS:Create(ugcMainBtn,TweenInfo.new(0.15),{BackgroundColor3=AC.BG_CARD}):Play() end)
     ugcMainBtn.MouseButton1Click:Connect(function()
-    pcall(function() AC.clickSnd:Play() end)
-    ugcPanel.Visible=not ugcPanel.Visible
-    if ugcPanel.Visible then
-        -- Reset position if it somehow went offscreen
-        local vp=AC.camera.ViewportSize
-        local pos=ugcPanel.Position
-        if pos.X.Offset<0 or pos.X.Offset>vp.X-50 or pos.Y.Offset<0 or pos.Y.Offset>vp.Y-50 then
-            ugcPanel.Position=UDim2.new(0.5,-UGC_W/2,0.5,-(UGC_H+44)/2)
+        pcall(function() AC.clickSnd:Play() end)
+        ugcPanel.Visible=not ugcPanel.Visible
+        if ugcPanel.Visible then
+            local vp=AC.camera.ViewportSize
+            local pos=ugcPanel.Position
+            if pos.X.Offset<0 or pos.X.Offset>vp.X-50 or pos.Y.Offset<0 or pos.Y.Offset>vp.Y-50 then
+                ugcPanel.Position=UDim2.new(0.5,-UGC_W/2,0.5,-(UGC_H+44)/2)
+            end
+            loadUgcData()
         end
-        loadUgcData()
-    end
-end)
+    end)
 
     btn.MouseButton1Click:Connect(function() AC.switchTab("Emotes") end)
-end
 
 -- ─────────────────────────────────────────────────────────
 -- MISC TAB
