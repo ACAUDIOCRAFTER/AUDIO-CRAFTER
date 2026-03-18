@@ -655,8 +655,7 @@ do
     local _,_,onIJ=AC.makeToggle(pg,"Infinite Jump",172,false)
     onIJ(function(v) if v then AC.ijConn=AC.UIS.JumpRequest:Connect(function() local h=AC.player.Character and AC.player.Character:FindFirstChildOfClass("Humanoid"); if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end) else if AC.ijConn then AC.ijConn:Disconnect(); AC.ijConn=nil end end end)
     local _,_,onNC=AC.makeToggle(pg,"Noclip",218,false)
-    onNC(function(v) if v then do
-        -- Cache character parts list so Stepped doesn't call GetDescendants every frame
+    onNC(function(v) if v then
         local _ncParts={}
         local function _rebuildNcParts(char)
             _ncParts={}
@@ -666,13 +665,13 @@ do
             end
         end
         _rebuildNcParts(AC.player.Character)
-        AC.player.CharacterAdded:Connect(function(c) task.wait() _rebuildNcParts(c) end)
+        AC.player.CharacterAdded:Connect(function(c) task.wait(); _rebuildNcParts(c) end)
         AC.noclipConn=AC.RS.Stepped:Connect(function()
             for _,p in ipairs(_ncParts) do
                 pcall(function() p.CanCollide=false end)
             end
         end)
-    end else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end end)
+    else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end end)
     local _,_,onFly=AC.makeToggle(pg,"Fly  (WASD + Q/E)",264,false)
     onFly(function(v)
         AC.flyActive=v; local char=AC.player.Character; if not char then return end
@@ -1707,7 +1706,7 @@ do
         else if AC.flyConn then AC.flyConn:Disconnect(); AC.flyConn=nil end; if AC.flyBV then AC.flyBV:Destroy(); AC.flyBV=nil end; if AC.flyBG then AC.flyBG:Destroy(); AC.flyBG=nil end; if AC._flyAtt then AC._flyAtt:Destroy(); AC._flyAtt=nil end; if hum then hum.PlatformStand=false end end
     end)
     makeChip("NC",140,Color3.fromRGB(200,100,10),function(v)
-        if v then do
+        if v then
         -- Cache character parts list so Stepped doesn't call GetDescendants every frame
         local _ncParts={}
         local function _rebuildNcParts(char)
@@ -1718,13 +1717,12 @@ do
             end
         end
         _rebuildNcParts(AC.player.Character)
-        AC.player.CharacterAdded:Connect(function(c) task.wait() _rebuildNcParts(c) end)
+        AC.player.CharacterAdded:Connect(function(c) task.wait(); _rebuildNcParts(c) end)
         AC.noclipConn=AC.RS.Stepped:Connect(function()
             for _,p in ipairs(_ncParts) do
                 pcall(function() p.CanCollide=false end)
             end
         end)
-    end
         else if AC.noclipConn then AC.noclipConn:Disconnect(); AC.noclipConn=nil end; if AC.player.Character then for _,p in ipairs(AC.player.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide=true end end end end
     end)
 end
