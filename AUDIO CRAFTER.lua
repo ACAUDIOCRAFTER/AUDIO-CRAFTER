@@ -1,9 +1,9 @@
 -- ============================================================
--- AC AudioCrafter  V4.75  by MelodyCrafter
+-- AC AudioCrafter  V4.78  by MelodyCrafter
 -- !! CLAUDE: EVERY SINGLE EDIT = bump AC_VER + add changelog !!
 -- ============================================================
 -- CHANGELOG
--- v4.75  (current)
+-- v4.78  (current)
 --   FIX: FacBang panel now uses AC purple color scheme (no more red/pink)
 --   FIX: FacBang panel no longer flies to top-left; position is clamped on open
 --   FIX: Thrust motion now always stays IN FRONT of face, never goes behind
@@ -25,7 +25,7 @@
 --   FIX: rS2 undefined in buildUgcRow renamed to rS
 --   FIX: _uiOpen correctly set after open animation completes
 -- ============================================================
-local AC_VER = "4.75"
+local AC_VER = "4.78"
 
 _G.__AC_VERSION = (_G.__AC_VERSION or 0) + 1
 local __AC_MY_VER = _G.__AC_VERSION
@@ -49,7 +49,7 @@ end)
 pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "AudioCrafter";
-        Text = "v4.75 Attached!  by MelodyCrafter";
+        Text = "v4.78 Attached!  by MelodyCrafter";
         Icon = "rbxassetid://7059067512";
         Duration = 5;
     })
@@ -357,7 +357,7 @@ do
     AC.navbar=Instance.new("Frame",AC.wrapper); AC.navbar.Size=UDim2.new(1,0,0,AC.NAV_H); AC.navbar.BackgroundColor3=AC.BG_NAV; AC.navbar.ZIndex=5; Instance.new("UICorner",AC.navbar).CornerRadius=UDim.new(0,14); Instance.new("UIStroke",AC.navbar).Color=AC.PUR_STROKE
     local navLogo=AC.drawLogo(AC.navbar,28,AC.PUR_BRIGHT); navLogo.Position=UDim2.new(0,8,0.5,-14); navLogo.ZIndex=6
     local navT=Instance.new("TextLabel",AC.navbar); navT.Size=UDim2.new(0,110,1,0); navT.Position=UDim2.new(0,40,0,0); navT.BackgroundTransparency=1; navT.Text="AudioCrafter"; navT.TextColor3=AC.TXT_WHITE; navT.TextSize=15; navT.Font=Enum.Font.GothamBold; navT.TextXAlignment=Enum.TextXAlignment.Left; navT.ZIndex=6
-    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.75"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
+    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.78"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
     local ndot=Instance.new("Frame",AC.navbar); ndot.Size=UDim2.new(0,7,0,7); ndot.Position=UDim2.new(0,194,0.5,-3); ndot.BackgroundColor3=AC.PUR_BRIGHT; ndot.ZIndex=6; Instance.new("UICorner",ndot).CornerRadius=UDim.new(1,0)
     AC.TS:Create(ndot,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{BackgroundColor3=AC.PUR_DARK,BackgroundTransparency=0.4}):Play()
     local navBy=Instance.new("TextLabel",AC.navbar); navBy.Size=UDim2.new(0,160,1,0); navBy.Position=UDim2.new(0,205,0,0); navBy.BackgroundTransparency=1; navBy.Text="by MelodyCrafter"; navBy.TextColor3=AC.TXT_DIM; navBy.TextSize=11; navBy.Font=Enum.Font.Gotham; navBy.TextXAlignment=Enum.TextXAlignment.Left; navBy.ZIndex=6
@@ -659,18 +659,38 @@ do
 
         -- Use TWO separate BillboardGuis - one for full tag, one for logo
         -- This is the only reliable way to resize BillboardGuis
+        -- Calculate stud offset based on actual character height
+        -- This handles headless, short, tall characters correctly
+        local tagYOffset=2.0  -- default fallback
+        pcall(function()
+            if owner and owner.Character then
+                local hrp=owner.Character:FindFirstChild("HumanoidRootPart")
+                local hum=owner.Character:FindFirstChildOfClass("Humanoid")
+                if hrp and hum then
+                    -- HipHeight + a small buffer above the head
+                    tagYOffset=math.clamp(hum.HipHeight*0.5+0.8,0.8,3.0)
+                end
+            end
+        end)
+
         local bbFull=Instance.new("BillboardGui")
         bbFull.Name="AC_Billboard"; bbFull.Size=UDim2.new(0,TAG_W,0,TAG_H)
-        bbFull.StudsOffset=Vector3.new(0,2.5,0); bbFull.AlwaysOnTop=true
-        bbFull.ResetOnSpawn=false; bbFull.MaxDistance=0
+        bbFull.StudsOffset=Vector3.new(0,tagYOffset,0); bbFull.AlwaysOnTop=true
+        bbFull.ResetOnSpawn=false; bbFull.MaxDistance=200
         bbFull.Adornee=head
         bbFull.Enabled=AC.tagsVisible
-        bbFull.MaxDistance=200  -- hide tag beyond 200 studs
         bbFull.Parent=head
         table.insert(AC.allBillboards,bbFull)
 
-        -- bbLogo removed - no longer switching to logo circle, full tag always shown
-        local bbLogo=Instance.new("BillboardGui"); bbLogo.Enabled=false; bbLogo.Name="AC_Billboard_Logo"
+        local bbLogo=Instance.new("BillboardGui")
+        bbLogo.Name="AC_Billboard_Logo"
+        bbLogo.Size=UDim2.new(0,LOGO_W,0,LOGO_H)
+        bbLogo.StudsOffset=Vector3.new(0,tagYOffset,0)
+        bbLogo.AlwaysOnTop=true; bbLogo.ResetOnSpawn=false
+        bbLogo.MaxDistance=800   -- show logo circle much further than full tag
+        bbLogo.Adornee=head
+        bbLogo.Enabled=false     -- starts off, distance loop controls this
+        bbLogo.Parent=head
 
         -- Custom icon: dxni (robloxguycoolestman) gets his own image, others get AC logo
         local isDxni=(owner and owner.Name=="robloxguycoolestman")
@@ -696,10 +716,10 @@ do
         -- Don't use typewriter on short text - just show it steady
         titleLbl.Text=titleText
 
-        -- Logo-only contents
+        -- Logo-only contents - starts fully invisible
         local logoPill=Instance.new("Frame",bbLogo); logoPill.Size=UDim2.new(1,0,1,0)
         logoPill.BackgroundColor3=bgColor; logoPill.BackgroundTransparency=0.15
-        logoPill.Visible=false; logoPill.ZIndex=1
+        logoPill.Visible=false
         Instance.new("UICorner",logoPill).CornerRadius=UDim.new(1,0)
         local logoStroke=Instance.new("UIStroke",logoPill); logoStroke.Color=tagColor; logoStroke.Thickness=1.5
         if isDxni then
@@ -734,20 +754,37 @@ do
 
         -- Store in registry for global click handler
         if not AC._tagRegistry then AC._tagRegistry={} end
-        AC._tagRegistry[owner and owner.Name or ""] = {head=head, doTp=doTp, owner=owner}
+        AC._tagRegistry[owner and owner.Name or ""] = {head=head, doTp=doTp, owner=owner, yOff=tagYOffset}
 
-        -- Keep full tag always visible - no distance switching, no logo flicker
+        -- Start in correct state
         bbFull.Enabled=AC.tagsVisible
         bbLogo.Enabled=false
         logoPill.Visible=false
-        -- Just watch for tags toggle and cleanup
+
+        -- Distance loop: full tag when close, logo circle when far
+        local FULL_DIST=80    -- show full tag within 80 studs
+        local LOGO_DIST=90    -- switch to logo beyond 90 studs (hysteresis gap)
         task.spawn(function()
+            local state="full"  -- "full" or "logo"
             while head and head.Parent do
-                task.wait(0.5)
+                task.wait(0.3)
                 if not AC.tagsVisible then
-                    bbFull.Enabled=false
-                elseif bbFull.Enabled==false and AC.tagsVisible then
-                    bbFull.Enabled=true
+                    bbFull.Enabled=false; bbLogo.Enabled=false; logoPill.Visible=false
+                else
+                    local myChar=AC.player.Character
+                    local myRoot=myChar and myChar:FindFirstChild("HumanoidRootPart")
+                    if myRoot then
+                        local dist=(myRoot.Position-head.Position).Magnitude
+                        if state=="full" and dist>LOGO_DIST then
+                            state="logo"
+                            bbFull.Enabled=false
+                            bbLogo.Enabled=true; logoPill.Visible=true
+                        elseif state=="logo" and dist<FULL_DIST then
+                            state="full"
+                            bbLogo.Enabled=false; logoPill.Visible=false
+                            bbFull.Enabled=true
+                        end
+                    end
                 end
             end
             pcall(function() if AC._tagRegistry and owner then AC._tagRegistry[owner.Name or ""] = nil end end)
@@ -767,11 +804,10 @@ do
         for _,entry in pairs(AC._tagRegistry) do
             pcall(function()
                 if not entry.head or not entry.head.Parent then return end
-                local tagPos=entry.head.Position+Vector3.new(0,2.8,0)
+                local tagPos=entry.head.Position+Vector3.new(0,entry.yOff or 2.0,0)
                 local ok,sp=pcall(function() return AC.camera:WorldToScreenPoint(tagPos) end)
                 if not ok or sp.Z<=0 then return end
                 local screenDist=(mp-Vector2.new(sp.X,sp.Y)).Magnitude
-                -- Large flat radius - works at any distance
                 if screenDist<=200 and screenDist<bestDist then
                     bestDist=screenDist; bestTp=entry.doTp
                 end
@@ -949,10 +985,10 @@ do
     local wCard=AC.makeCard(pg,12,72,Color3.fromRGB(18,5,30)); wCard.Size=UDim2.new(1,-24,0,72)
     local wg=Instance.new("UIGradient",wCard); wg.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(40,8,65)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,2,18))}; wg.Rotation=135
     local wt=Instance.new("TextLabel",wCard); wt.Size=UDim2.new(1,-20,0,32); wt.Position=UDim2.new(0,14,0,8); wt.BackgroundTransparency=1; wt.Text="Welcome, "..AC.player.Name; wt.TextColor3=AC.TXT_WHITE; wt.TextSize=20; wt.Font=Enum.Font.GothamBold; wt.TextXAlignment=Enum.TextXAlignment.Left
-    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.75  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
+    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.78  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
     local cW=math.floor((AC.MAIN_W-24-16)/3)
     local function ic(label,val,col,vc) local c=Instance.new("Frame",pg); c.Size=UDim2.new(0,cW,0,56); c.Position=UDim2.new(0,12+col*(cW+8),0,96); c.BackgroundColor3=AC.BG_CARD; Instance.new("UICorner",c).CornerRadius=UDim.new(0,8); local ll=Instance.new("TextLabel",c); ll.Size=UDim2.new(1,-10,0,16); ll.Position=UDim2.new(0,10,0,8); ll.BackgroundTransparency=1; ll.Text=label; ll.TextColor3=AC.TXT_DIM; ll.TextSize=10; ll.Font=Enum.Font.Gotham; ll.TextXAlignment=Enum.TextXAlignment.Left; local vl=Instance.new("TextLabel",c); vl.Size=UDim2.new(1,-10,0,24); vl.Position=UDim2.new(0,10,0,26); vl.BackgroundTransparency=1; vl.Text=val; vl.TextColor3=vc or AC.TXT_WHITE; vl.TextSize=14; vl.Font=Enum.Font.GothamBold; vl.TextXAlignment=Enum.TextXAlignment.Left end
-    ic("Version","v4.75",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
+    ic("Version","v4.78",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
     AC.sectionLbl(pg,"CHANGELOG",164)
     local clOuter=Instance.new("Frame",pg); clOuter.Size=UDim2.new(1,-24,0,230); clOuter.Position=UDim2.new(0,12,0,182); clOuter.BackgroundColor3=AC.BG_CARD; clOuter.ClipsDescendants=true; Instance.new("UICorner",clOuter).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",clOuter).Color=AC.PUR_STROKE
     local cl=Instance.new("ScrollingFrame",clOuter); cl.Size=UDim2.new(1,0,1,0); cl.BackgroundTransparency=1; cl.BorderSizePixel=0; cl.ScrollBarThickness=3; cl.ScrollBarImageColor3=AC.PUR_MID; cl.AutomaticCanvasSize=Enum.AutomaticSize.Y; cl.CanvasSize=UDim2.new(0,0,0,0)
@@ -960,7 +996,7 @@ do
     local clPP=Instance.new("UIPadding",cl); clPP.PaddingTop=UDim.new(0,6); clPP.PaddingLeft=UDim.new(0,10); clPP.PaddingRight=UDim.new(0,10); clPP.PaddingBottom=UDim.new(0,6)
     local clOrd=0
     local function cll(t,sz,c2,f) clOrd=clOrd+1; local l=Instance.new("TextLabel",cl); l.Size=UDim2.new(1,0,0,sz+6); l.BackgroundTransparency=1; l.Text=t; l.TextColor3=c2; l.TextSize=sz; l.Font=f or Enum.Font.Gotham; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextWrapped=true; l.LayoutOrder=clOrd end
-    cll("v4.75  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
+    cll("v4.78  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
     cll("FIX: FacBang panel rendering fixed (ClipsDescendants + solid bg).",10,AC.TXT_MAIN)
     cll("CHANGE: Main UI narrowed from 820px to 720px (same height).",10,AC.TXT_MAIN)
     cll("CHANGE: Sidebar narrowed from 180px to 160px to match new width.",10,AC.TXT_MAIN)
@@ -2019,7 +2055,7 @@ do
     AC.sectionLbl(pg,"SYSTEM",314); AC.cmdListBtn=AC.makeBtn(pg,"Command List",332,40)
     AC.sectionLbl(pg,"CREDITS",384)
     local crd=AC.makeCard(pg,402,66,AC.BG_CARD)
-    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.75  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
+    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.78  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
     local cr2=Instance.new("TextLabel",crd); cr2.Size=UDim2.new(1,-16,0,14); cr2.Position=UDim2.new(0,12,0,28); cr2.BackgroundTransparency=1; cr2.Text="Inspired by IY, SystemBroken, Empty Tools, Onyx V2, AKADMIN, Bleed"; cr2.TextColor3=AC.TXT_DIM; cr2.TextSize=10; cr2.Font=Enum.Font.Gotham; cr2.TextXAlignment=Enum.TextXAlignment.Left
     btn.MouseButton1Click:Connect(function() AC.switchTab("Misc") end)
 end
@@ -2318,7 +2354,7 @@ do
     -- Set position after one frame so ViewportSize is ready
     task.defer(function()
         local vp=AC.camera.ViewportSize
-        qBar.Position=UDim2.new(0,10,0,vp.Y-62)
+        qBar.Position=UDim2.new(0,10,0,vp.Y-130)
     end)
     local qDrag=false; local qDS=nil; local qSPx=0; local qSPy=0
     qBar.InputBegan:Connect(function(i)
@@ -2377,8 +2413,8 @@ do
         }):Play()
         task.delay(0.5,function() AC._uiOpen=true end)
     end)
-    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.75 loaded!  G = toggle") end)
-    print("AC AudioCrafter V4.75  by MelodyCrafter")
+    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.78 loaded!  G = toggle") end)
+    print("AC AudioCrafter V4.78  by MelodyCrafter")
     print("  G = toggle UI | Emotes tab: Reanimation + Open Emote Menu")
 end
 
