@@ -1,9 +1,9 @@
 -- ============================================================
--- AC AudioCrafter  V4.44  by MelodyCrafter
+-- AC AudioCrafter  V4.47  by MelodyCrafter
 -- !! CLAUDE: EVERY SINGLE EDIT = bump AC_VER + add changelog !!
 -- ============================================================
 -- CHANGELOG
--- v4.44  (current)
+-- v4.47  (current)
 --   FIX: FacBang panel now uses AC purple color scheme (no more red/pink)
 --   FIX: FacBang panel no longer flies to top-left; position is clamped on open
 --   FIX: Thrust motion now always stays IN FRONT of face, never goes behind
@@ -25,7 +25,7 @@
 --   FIX: rS2 undefined in buildUgcRow renamed to rS
 --   FIX: _uiOpen correctly set after open animation completes
 -- ============================================================
-local AC_VER = "4.44"
+local AC_VER = "4.47"
 
 _G.__AC_VERSION = (_G.__AC_VERSION or 0) + 1
 local __AC_MY_VER = _G.__AC_VERSION
@@ -49,7 +49,7 @@ end)
 pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "AudioCrafter";
-        Text = "v4.44 Attached!  by MelodyCrafter";
+        Text = "v4.47 Attached!  by MelodyCrafter";
         Icon = "rbxassetid://7059067512";
         Duration = 5;
     })
@@ -71,7 +71,11 @@ local function safeGet(key)
 end
 local function safeRun(key)
     local url=_URLS[key]; assert(type(url)=="string" and url:sub(1,8)=="https://","[AC] Bad URL: "..tostring(key))
-    return loadstring(game:HttpGet(url))()
+    local src=game:HttpGet(url)
+    assert(type(src)=="string" and #src>0,"[AC] Empty response from: "..url)
+    local fn,err=loadstring(src)
+    assert(fn,"[AC] loadstring failed for "..key..": "..tostring(err))
+    return fn()
 end
 
 AC.Players=game:GetService("Players"); AC.UIS=game:GetService("UserInputService"); AC.TS=game:GetService("TweenService")
@@ -353,7 +357,7 @@ do
     AC.navbar=Instance.new("Frame",AC.wrapper); AC.navbar.Size=UDim2.new(1,0,0,AC.NAV_H); AC.navbar.BackgroundColor3=AC.BG_NAV; AC.navbar.ZIndex=5; Instance.new("UICorner",AC.navbar).CornerRadius=UDim.new(0,14); Instance.new("UIStroke",AC.navbar).Color=AC.PUR_STROKE
     local navLogo=AC.drawLogo(AC.navbar,28,AC.PUR_BRIGHT); navLogo.Position=UDim2.new(0,8,0.5,-14); navLogo.ZIndex=6
     local navT=Instance.new("TextLabel",AC.navbar); navT.Size=UDim2.new(0,110,1,0); navT.Position=UDim2.new(0,40,0,0); navT.BackgroundTransparency=1; navT.Text="AudioCrafter"; navT.TextColor3=AC.TXT_WHITE; navT.TextSize=15; navT.Font=Enum.Font.GothamBold; navT.TextXAlignment=Enum.TextXAlignment.Left; navT.ZIndex=6
-    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.44"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
+    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.47"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
     local ndot=Instance.new("Frame",AC.navbar); ndot.Size=UDim2.new(0,7,0,7); ndot.Position=UDim2.new(0,194,0.5,-3); ndot.BackgroundColor3=AC.PUR_BRIGHT; ndot.ZIndex=6; Instance.new("UICorner",ndot).CornerRadius=UDim.new(1,0)
     AC.TS:Create(ndot,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{BackgroundColor3=AC.PUR_DARK,BackgroundTransparency=0.4}):Play()
     local navBy=Instance.new("TextLabel",AC.navbar); navBy.Size=UDim2.new(0,160,1,0); navBy.Position=UDim2.new(0,205,0,0); navBy.BackgroundTransparency=1; navBy.Text="by MelodyCrafter"; navBy.TextColor3=AC.TXT_DIM; navBy.TextSize=11; navBy.Font=Enum.Font.Gotham; navBy.TextXAlignment=Enum.TextXAlignment.Left; navBy.ZIndex=6
@@ -600,8 +604,9 @@ do
     -- Add by exact Roblox username (case-sensitive)
     -- ============================================================
     local AC_AUTHORIZED_NAMES={
-        "MelodyCrafter3",   -- owner (you)
-        "bleep518",         -- LUKI
+        "MelodyCrafter3",       -- owner (you)
+        "bleep518",             -- LUKI
+        "robloxguycoolestman",  -- dxni
     }
     local function isAuthorized(player)
         for _,name in ipairs(AC_AUTHORIZED_NAMES) do
@@ -609,11 +614,8 @@ do
         end
         return false
     end
-    -- If we're not authorized ourselves, don't show anything
-    if not isAuthorized(AC.player) then
-        -- Not an authorized user - skip entire tags system silently
-        goto skipTags
-    end
+    -- If we're not authorized ourselves, don't show anything at all
+    if isAuthorized(AC.player) then
     local TYPE_SPD=0.09; local HOLD=1.8; local DEL_SPD=0.04; local BLANK=0.35
     local function startTypewriter(tLbl,displayText)
         task.spawn(function()
@@ -694,7 +696,7 @@ do
     for _,p in ipairs(AC.Players:GetPlayers()) do watchPlayer(p) end
     AC.Players.PlayerAdded:Connect(watchPlayer)
     AC.Players.PlayerRemoving:Connect(function(p) if p.Character then local h=p.Character:FindFirstChild("Head"); if h then local bb=h:FindFirstChild("AC_Billboard"); if bb then bb:Destroy() end end end end)
-    ::skipTags::
+    end -- close isAuthorized check
 end
 
 -- HOME TAB
@@ -703,10 +705,10 @@ do
     local wCard=AC.makeCard(pg,12,72,Color3.fromRGB(18,5,30)); wCard.Size=UDim2.new(1,-24,0,72)
     local wg=Instance.new("UIGradient",wCard); wg.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(40,8,65)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,2,18))}; wg.Rotation=135
     local wt=Instance.new("TextLabel",wCard); wt.Size=UDim2.new(1,-20,0,32); wt.Position=UDim2.new(0,14,0,8); wt.BackgroundTransparency=1; wt.Text="Welcome, "..AC.player.Name; wt.TextColor3=AC.TXT_WHITE; wt.TextSize=20; wt.Font=Enum.Font.GothamBold; wt.TextXAlignment=Enum.TextXAlignment.Left
-    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.44  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
+    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.47  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
     local cW=math.floor((AC.MAIN_W-24-16)/3)
     local function ic(label,val,col,vc) local c=Instance.new("Frame",pg); c.Size=UDim2.new(0,cW,0,56); c.Position=UDim2.new(0,12+col*(cW+8),0,96); c.BackgroundColor3=AC.BG_CARD; Instance.new("UICorner",c).CornerRadius=UDim.new(0,8); local ll=Instance.new("TextLabel",c); ll.Size=UDim2.new(1,-10,0,16); ll.Position=UDim2.new(0,10,0,8); ll.BackgroundTransparency=1; ll.Text=label; ll.TextColor3=AC.TXT_DIM; ll.TextSize=10; ll.Font=Enum.Font.Gotham; ll.TextXAlignment=Enum.TextXAlignment.Left; local vl=Instance.new("TextLabel",c); vl.Size=UDim2.new(1,-10,0,24); vl.Position=UDim2.new(0,10,0,26); vl.BackgroundTransparency=1; vl.Text=val; vl.TextColor3=vc or AC.TXT_WHITE; vl.TextSize=14; vl.Font=Enum.Font.GothamBold; vl.TextXAlignment=Enum.TextXAlignment.Left end
-    ic("Version","v4.44",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
+    ic("Version","v4.47",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
     AC.sectionLbl(pg,"CHANGELOG",164)
     local clOuter=Instance.new("Frame",pg); clOuter.Size=UDim2.new(1,-24,0,230); clOuter.Position=UDim2.new(0,12,0,182); clOuter.BackgroundColor3=AC.BG_CARD; clOuter.ClipsDescendants=true; Instance.new("UICorner",clOuter).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",clOuter).Color=AC.PUR_STROKE
     local cl=Instance.new("ScrollingFrame",clOuter); cl.Size=UDim2.new(1,0,1,0); cl.BackgroundTransparency=1; cl.BorderSizePixel=0; cl.ScrollBarThickness=3; cl.ScrollBarImageColor3=AC.PUR_MID; cl.AutomaticCanvasSize=Enum.AutomaticSize.Y; cl.CanvasSize=UDim2.new(0,0,0,0)
@@ -714,7 +716,7 @@ do
     local clPP=Instance.new("UIPadding",cl); clPP.PaddingTop=UDim.new(0,6); clPP.PaddingLeft=UDim.new(0,10); clPP.PaddingRight=UDim.new(0,10); clPP.PaddingBottom=UDim.new(0,6)
     local clOrd=0
     local function cll(t,sz,c2,f) clOrd=clOrd+1; local l=Instance.new("TextLabel",cl); l.Size=UDim2.new(1,0,0,sz+6); l.BackgroundTransparency=1; l.Text=t; l.TextColor3=c2; l.TextSize=sz; l.Font=f or Enum.Font.Gotham; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextWrapped=true; l.LayoutOrder=clOrd end
-    cll("v4.44  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
+    cll("v4.47  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
     cll("FIX: FacBang panel rendering fixed (ClipsDescendants + solid bg).",10,AC.TXT_MAIN)
     cll("CHANGE: Main UI narrowed from 820px to 720px (same height).",10,AC.TXT_MAIN)
     cll("CHANGE: Sidebar narrowed from 180px to 160px to match new width.",10,AC.TXT_MAIN)
@@ -1096,7 +1098,13 @@ do
         if rnLoading then AC.toast("Still loading...",AC.ORANGE_W); return end
         rnLoading=true; AC.toast("Loading Reanimation API...",AC.ORANGE_W)
         task.spawn(function()
-            local ok,result=pcall(function() return loadstring(game:HttpGet(_URLS.REANIMATION))() end)
+        local ok,result=pcall(function()
+            local src=game:HttpGet(_URLS.REANIMATION)
+            assert(type(src)=="string" and #src>0,"empty response")
+            local fn,err=loadstring(src)
+            assert(fn,"loadstring failed: "..tostring(err))
+            return fn()
+        end)
             rnLoading=false
             if ok and result then rnAPI=result; AC.rnAPI=result; AC.toast("Reanimation ready!",AC.GREEN_OK); cb(rnAPI)
             else AC.toast("API load failed",AC.RED_ERR) end
@@ -1452,9 +1460,18 @@ do
     local ugcAllRows={}; local ugcFavOnly=false; local ugcHighRow=nil
 
     local function stopUgcTrack()
-        if ugcActiveTrack then pcall(function() ugcActiveTrack:Stop(0.3) end); ugcActiveTrack=nil end
-        for _,t in ipairs(ugcLoadedTracks) do pcall(function() if t then t:Stop(0.3) end end) end
+        if ugcActiveTrack then pcall(function() ugcActiveTrack:Stop(0) end); ugcActiveTrack=nil end
+        for _,t in ipairs(ugcLoadedTracks) do pcall(function() if t then t:Stop(0) end end) end
         ugcLoadedTracks={}
+        -- Also stop ALL animator tracks to prevent 32-track limit
+        pcall(function()
+            local char=AC.player.Character; if not char then return end
+            local hum=char:FindFirstChildOfClass("Humanoid"); if not hum then return end
+            local animator=hum:FindFirstChildOfClass("Animator"); if not animator then return end
+            for _,t in ipairs(animator:GetPlayingAnimationTracks()) do
+                pcall(function() t:Stop(0) end)
+            end
+        end)
     end
 
     local function playUgcEmote(id)
@@ -1735,7 +1752,7 @@ do
     AC.sectionLbl(pg,"SYSTEM",314); AC.cmdListBtn=AC.makeBtn(pg,"Command List",332,40)
     AC.sectionLbl(pg,"CREDITS",384)
     local crd=AC.makeCard(pg,402,66,AC.BG_CARD)
-    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.44  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
+    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.47  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
     local cr2=Instance.new("TextLabel",crd); cr2.Size=UDim2.new(1,-16,0,14); cr2.Position=UDim2.new(0,12,0,28); cr2.BackgroundTransparency=1; cr2.Text="Inspired by IY, SystemBroken, Empty Tools, Onyx V2, AKADMIN, Bleed"; cr2.TextColor3=AC.TXT_DIM; cr2.TextSize=10; cr2.Font=Enum.Font.Gotham; cr2.TextXAlignment=Enum.TextXAlignment.Left
     btn.MouseButton1Click:Connect(function() AC.switchTab("Misc") end)
 end
@@ -2093,8 +2110,8 @@ do
         }):Play()
         task.delay(0.5,function() AC._uiOpen=true end)
     end)
-    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.44 loaded!  G = toggle") end)
-    print("AC AudioCrafter V4.44  by MelodyCrafter")
+    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.47 loaded!  G = toggle") end)
+    print("AC AudioCrafter V4.47  by MelodyCrafter")
     print("  G = toggle UI | Emotes tab: Reanimation + Open Emote Menu")
 end
 
