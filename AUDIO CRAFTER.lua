@@ -619,7 +619,7 @@ do
         task.delay(8,function() if f and f.Parent then AC.TS:Create(f,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.In),{Position=UDim2.new(1,10,0,yOff)}):Play(); task.delay(0.3,function() if f and f.Parent then f:Destroy() end; _notifOffset=math.max(10,_notifOffset-(NOTIF_H+8)) end) end end)
     end
     task.delay(1.5,function() for _,p in ipairs(AC.Players:GetPlayers()) do if p~=AC.player and isAuthorized(p) then notifyACUser(p) end end end)
-    AC.Players.PlayerAdded:Connect(function(p) if isAuthorized(p) then task.wait(1); notifyACUser(p) end end)
+    -- PlayerAdded notify handled below in watchPlayer block
     AC.Players.PlayerRemoving:Connect(function(p)
         if p==AC.player or not isAuthorized(p) then return end
         local pIsOwner=isOwnerPlayer(p); local accentColor=pIsOwner and Color3.fromRGB(255,200,40) or AC.PUR_BRIGHT
@@ -637,19 +637,70 @@ do
     local function plantMarker(char)
         local head=char:WaitForChild("Head",10); if not head then return end
         for _,bb in ipairs(head:GetChildren()) do if bb:IsA("BillboardGui") and (bb.Name=="AC_Billboard" or bb.Name=="AC_Billboard_Logo") then bb:Destroy() end end
-        if not head:FindFirstChild(MARKER) then local m=Instance.new("BillboardGui"); m.Name=MARKER; m.Size=UDim2.new(0,0,0,0); m.Enabled=false; m.Parent=head end
+        -- Plant the marker so OTHER players running AC can detect us
+        if not head:FindFirstChild(MARKER) then
+            local m=Instance.new("BillboardGui"); m.Name=MARKER; m.Size=UDim2.new(0,0,0,0); m.Enabled=false; m.Parent=head
+        end
         attachTag(char,AC.player)
     end
     if AC.player.Character then task.spawn(plantMarker,AC.player.Character) end
     AC.player.CharacterAdded:Connect(plantMarker)
-    local function watchPlayer(p)
-        if p==AC.player or not isAuthorized(p) then return end
-        local function onChar(char) task.spawn(function() local head=char:WaitForChild("Head",10); if not head then return end; attachTag(char,p) end) end
-        if p.Character then onChar(p.Character) end; p.CharacterAdded:Connect(onChar)
+
+    -- watchPlayer: show a tag for ANY player who has the AC_Active marker on their head
+    -- (the marker is planted by anyone running this script - no hardcoded name list needed)
+    local function tryAttachTag(p)
+        if p==AC.player then return end
+        local char=p.Character; if not char then return end
+        local head=char:FindFirstChild("Head"); if not head then return end
+        -- Only attach if they have the AC marker (means they're running AC too)
+        if head:FindFirstChild(MARKER) then
+            attachTag(char,p)
+        end
     end
+
+    local function watchPlayer(p)
+        if p==AC.player then return end
+        local function onChar(char)
+            task.spawn(function()
+                local head=char:WaitForChild("Head",10); if not head then return end
+                -- Wait up to 8s for the marker to appear (they need time to execute their script)
+                local waited=0
+                while not head:FindFirstChild(MARKER) and waited<8 and head.Parent do
+                    task.wait(0.5); waited=waited+0.5
+                end
+                if head:FindFirstChild(MARKER) and head.Parent then
+                    attachTag(char,p)
+                end
+                -- Also watch for the marker being added later (e.g. they execute mid-game)
+                head.ChildAdded:Connect(function(child)
+                    if child.Name==MARKER then
+                        task.wait(0.1)  -- tiny delay so marker is fully set up
+                        if not head:FindFirstChild("AC_Billboard") then
+                            attachTag(char,p)
+                        end
+                    end
+                end)
+            end)
+        end
+        if p.Character then onChar(p.Character) end
+        p.CharacterAdded:Connect(onChar)
+    end
+
+    -- Notify joined players who are running AC (detected via marker)
+    -- We still only send the join notification for the hardcoded authorized list
+    -- but TAGS show for anyone running the script
     for _,p in ipairs(AC.Players:GetPlayers()) do watchPlayer(p) end
-    AC.Players.PlayerAdded:Connect(watchPlayer)
-    AC.Players.PlayerRemoving:Connect(function(p) if p.Character then local h=p.Character:FindFirstChild("Head"); if h then local bb=h:FindFirstChild("AC_Billboard"); if bb then bb:Destroy() end end end end)
+    AC.Players.PlayerAdded:Connect(function(p)
+        watchPlayer(p)
+        -- join notify only for hardcoded authorized users
+        if isAuthorized(p) then task.wait(1); notifyACUser(p) end
+    end)
+    AC.Players.PlayerRemoving:Connect(function(p)
+        if p.Character then local h=p.Character:FindFirstChild("Head"); if h then
+            local bb=h:FindFirstChild("AC_Billboard"); if bb then bb:Destroy() end
+            local bb2=h:FindFirstChild("AC_Billboard_Logo"); if bb2 then bb2:Destroy() end
+        end end
+    end)
     end -- close isAuthorized check
 end
 -- HOME TAB
