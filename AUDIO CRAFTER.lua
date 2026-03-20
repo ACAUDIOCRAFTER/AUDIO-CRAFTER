@@ -1,9 +1,9 @@
 -- ============================================================
--- AC AudioCrafter  V4.33  by MelodyCrafter
+-- AC AudioCrafter  V4.44  by MelodyCrafter
 -- !! CLAUDE: EVERY SINGLE EDIT = bump AC_VER + add changelog !!
 -- ============================================================
 -- CHANGELOG
--- v4.33  (current)
+-- v4.44  (current)
 --   FIX: FacBang panel now uses AC purple color scheme (no more red/pink)
 --   FIX: FacBang panel no longer flies to top-left; position is clamped on open
 --   FIX: Thrust motion now always stays IN FRONT of face, never goes behind
@@ -25,7 +25,7 @@
 --   FIX: rS2 undefined in buildUgcRow renamed to rS
 --   FIX: _uiOpen correctly set after open animation completes
 -- ============================================================
-local AC_VER = "4.33"
+local AC_VER = "4.44"
 
 _G.__AC_VERSION = (_G.__AC_VERSION or 0) + 1
 local __AC_MY_VER = _G.__AC_VERSION
@@ -49,7 +49,7 @@ end)
 pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "AudioCrafter";
-        Text = "v4.33 Attached!  by MelodyCrafter";
+        Text = "v4.44 Attached!  by MelodyCrafter";
         Icon = "rbxassetid://7059067512";
         Duration = 5;
     })
@@ -353,7 +353,7 @@ do
     AC.navbar=Instance.new("Frame",AC.wrapper); AC.navbar.Size=UDim2.new(1,0,0,AC.NAV_H); AC.navbar.BackgroundColor3=AC.BG_NAV; AC.navbar.ZIndex=5; Instance.new("UICorner",AC.navbar).CornerRadius=UDim.new(0,14); Instance.new("UIStroke",AC.navbar).Color=AC.PUR_STROKE
     local navLogo=AC.drawLogo(AC.navbar,28,AC.PUR_BRIGHT); navLogo.Position=UDim2.new(0,8,0.5,-14); navLogo.ZIndex=6
     local navT=Instance.new("TextLabel",AC.navbar); navT.Size=UDim2.new(0,110,1,0); navT.Position=UDim2.new(0,40,0,0); navT.BackgroundTransparency=1; navT.Text="AudioCrafter"; navT.TextColor3=AC.TXT_WHITE; navT.TextSize=15; navT.Font=Enum.Font.GothamBold; navT.TextXAlignment=Enum.TextXAlignment.Left; navT.ZIndex=6
-    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.33"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
+    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.44"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
     local ndot=Instance.new("Frame",AC.navbar); ndot.Size=UDim2.new(0,7,0,7); ndot.Position=UDim2.new(0,194,0.5,-3); ndot.BackgroundColor3=AC.PUR_BRIGHT; ndot.ZIndex=6; Instance.new("UICorner",ndot).CornerRadius=UDim.new(1,0)
     AC.TS:Create(ndot,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{BackgroundColor3=AC.PUR_DARK,BackgroundTransparency=0.4}):Play()
     local navBy=Instance.new("TextLabel",AC.navbar); navBy.Size=UDim2.new(0,160,1,0); navBy.Position=UDim2.new(0,205,0,0); navBy.BackgroundTransparency=1; navBy.Text="by MelodyCrafter"; navBy.TextColor3=AC.TXT_DIM; navBy.TextSize=11; navBy.Font=Enum.Font.Gotham; navBy.TextXAlignment=Enum.TextXAlignment.Left; navBy.ZIndex=6
@@ -372,28 +372,41 @@ do
     AC.pageContainer=Instance.new("Frame",AC.mainPanel); AC.pageContainer.Size=UDim2.new(1,0,1,0); AC.pageContainer.BackgroundTransparency=1; AC.pageContainer.ClipsDescendants=true
     AC.reopenBtn=Instance.new("TextButton",AC.screenGui)
     AC.reopenBtn.Size=UDim2.new(0,46,0,46)
-    AC.reopenBtn.Position=UDim2.new(0,10,0.5,-23)  -- left-center, never off-screen
+    AC.reopenBtn.Position=UDim2.new(0,100,0,100)  -- temp, set properly on show
     AC.reopenBtn.BackgroundColor3=AC.BG_PANEL; AC.reopenBtn.Text=""; AC.reopenBtn.Visible=false; AC.reopenBtn.ZIndex=20
     Instance.new("UICorner",AC.reopenBtn).CornerRadius=UDim.new(1,0)
     local rbS=Instance.new("UIStroke",AC.reopenBtn); rbS.Color=AC.PUR_BRIGHT; rbS.Thickness=2
     AC.TS:Create(rbS,TweenInfo.new(1.2,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{Color=AC.PUR_DARK,Transparency=0.3}):Play()
     local rl=AC.drawLogo(AC.reopenBtn,28,AC.PUR_BRIGHT); rl.Position=UDim2.new(0.5,-14,0.5,-14); rl.ZIndex=21
     -- Make reopen btn draggable so user can reposition it
-    local rbDrag,rbDS,rbSP=false,nil,nil
+    local rbDrag=false; local rbDS=nil; local rbSP=nil; local rbMoved=false
     AC.reopenBtn.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseButton1 then
-            rbDrag=true; rbDS=i.Position; rbSP=AC.reopenBtn.Position
+            rbDrag=true; rbMoved=false; rbDS=i.Position
+            local vp=AC.camera.ViewportSize
+            local curX=AC.reopenBtn.Position.X.Offset + AC.reopenBtn.Position.X.Scale*vp.X
+            local curY=AC.reopenBtn.Position.Y.Offset + AC.reopenBtn.Position.Y.Scale*vp.Y
+            rbSP=Vector2.new(curX, curY)
             i.Changed:Connect(function() if i.UserInputState==Enum.UserInputState.End then rbDrag=false end end)
         end
     end)
     AC.UIS.InputChanged:Connect(function(i)
         if rbDrag and i.UserInputType==Enum.UserInputType.MouseMovement then
             local d=i.Position-rbDS
-            local vp=AC.camera.ViewportSize
-            local nx=math.clamp(rbSP.X.Offset+d.X,0,vp.X-46)
-            local ny=math.clamp(rbSP.Y.Offset+d.Y,0,vp.Y-46)
-            AC.reopenBtn.Position=UDim2.new(0,nx,0,ny)
+            -- Only count as drag if moved more than 4px
+            if d.Magnitude>4 then rbMoved=true end
+            if rbMoved then
+                local vp=AC.camera.ViewportSize
+                local nx=math.clamp(rbSP.X+d.X,0,vp.X-46)
+                local ny=math.clamp(rbSP.Y+d.Y,0,vp.Y-46)
+                AC.reopenBtn.Position=UDim2.new(0,nx,0,ny)
+            end
         end
+    end)
+    -- Only open if it was a click not a drag
+    AC.reopenBtn.MouseButton1Click:Connect(function()
+        if not rbMoved then AC.doOpen() end
+        rbMoved=false
     end)
     local dragging,dragStart,startPos
     AC.navbar.InputBegan:Connect(function(i)
@@ -416,6 +429,9 @@ do
         AC.TS:Create(AC.wrapper,TweenInfo.new(0.3,Enum.EasingStyle.Back,Enum.EasingDirection.In),{Size=UDim2.new(0,0,0,0),Position=UDim2.new(0.5,0,0.5,0)}):Play()
         task.delay(0.32,function()
             AC.wrapper.Visible=false
+            -- Position at bottom-left using actual viewport size at show time
+            local vp=AC.camera.ViewportSize
+            AC.reopenBtn.Position=UDim2.new(0,vp.X-62,0,vp.Y/2-23)
             AC.reopenBtn.Visible=true
             _uiTweening=false
         end)
@@ -425,10 +441,16 @@ do
         AC._uiOpen=true; _uiTweening=true
         AC.reopenBtn.Visible=false
         AC.wrapper.Visible=true
+        -- Remember last position - only center on first open
+        local lastPos=AC.wrapper.Position
+        local isFirstOpen=(lastPos.X.Scale==0.5 and lastPos.X.Offset==0)
         AC.wrapper.Size=UDim2.new(0,0,0,0)
-        AC.wrapper.Position=UDim2.new(0.5,0,0.5,0)
+        if isFirstOpen then
+            AC.wrapper.Position=UDim2.new(0.5,0,0.5,0)
+        end
         pcall(function() AC.openSound:Play() end)
-        AC.TS:Create(AC.wrapper,TweenInfo.new(0.42,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,AC.UI_W,0,AC.UI_H),Position=UDim2.new(0.5,-AC.UI_W/2,0.5,-AC.UI_H/2)}):Play()
+        local targetPos=isFirstOpen and UDim2.new(0.5,-AC.UI_W/2,0.5,-AC.UI_H/2) or UDim2.new(lastPos.X.Scale,lastPos.X.Offset,lastPos.Y.Scale,lastPos.Y.Offset)
+        AC.TS:Create(AC.wrapper,TweenInfo.new(0.42,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,AC.UI_W,0,AC.UI_H),Position=targetPos}):Play()
         task.delay(0.44,function() _uiTweening=false end)
     end
     -- Safety net: if both wrapper and reopenBtn are invisible, restore reopenBtn
@@ -437,6 +459,8 @@ do
             task.wait(3)
             pcall(function()
                 if not AC.wrapper.Visible and not AC.reopenBtn.Visible and not _uiTweening then
+                    local vp=AC.camera.ViewportSize
+                    AC.reopenBtn.Position=UDim2.new(0,vp.X-62,0,vp.Y/2-23)
                     AC.reopenBtn.Visible=true
                     AC._uiOpen=false
                 end
@@ -444,7 +468,6 @@ do
         end
     end)
     AC.minBtn.MouseButton1Click:Connect(AC.doMin)
-    AC.reopenBtn.MouseButton1Click:Connect(AC.doOpen)
     AC.UIS.InputBegan:Connect(function(i,gp)
         pcall(function()
             if gp then return end
@@ -571,6 +594,26 @@ end
 -- BILLBOARD TAGS
 do
     local MARKER="AC_Active"; local OWNER_ID=AC.player.UserId
+
+    -- ============================================================
+    -- AUTHORIZED USERS - only these people can see/show AC tags
+    -- Add by exact Roblox username (case-sensitive)
+    -- ============================================================
+    local AC_AUTHORIZED_NAMES={
+        "MelodyCrafter3",   -- owner (you)
+        "bleep518",         -- LUKI
+    }
+    local function isAuthorized(player)
+        for _,name in ipairs(AC_AUTHORIZED_NAMES) do
+            if player.Name==name then return true end
+        end
+        return false
+    end
+    -- If we're not authorized ourselves, don't show anything
+    if not isAuthorized(AC.player) then
+        -- Not an authorized user - skip entire tags system silently
+        goto skipTags
+    end
     local TYPE_SPD=0.09; local HOLD=1.8; local DEL_SPD=0.04; local BLANK=0.35
     local function startTypewriter(tLbl,displayText)
         task.spawn(function()
@@ -590,7 +633,7 @@ do
         local isOwner=(owner and owner.UserId==OWNER_ID)
         local tagColor=isOwner and Color3.fromRGB(255,200,40) or AC.PUR_BRIGHT
         local bgColor=isOwner and Color3.fromRGB(28,18,0) or Color3.fromRGB(8,2,16)
-        local titleText=isOwner and "AC OWNER" or "AUDIO USER"
+        local titleText=isOwner and "AC OWNER" or "AC USER"
         local titleColor=isOwner and Color3.fromRGB(255,215,60) or AC.TXT_BILLBOARD
         local gradCol0=isOwner and Color3.fromRGB(30,20,0) or Color3.fromRGB(15,4,28)
         local gradCol1=isOwner and Color3.fromRGB(12,8,0) or Color3.fromRGB(6,2,12)
@@ -623,6 +666,7 @@ do
     end
     local function checkACUser(p)
         if p==AC.player then return end
+        if not isAuthorized(p) then return end  -- ignore non-authorized players
         task.spawn(function()
             local char=p.Character or p.CharacterAdded:Wait(); local head=char:WaitForChild("Head",10); if not head then return end
             if head:FindFirstChild(MARKER) then notifyACUser(p); return end
@@ -641,6 +685,8 @@ do
     AC.player.CharacterAdded:Connect(plantMarker)
     local function watchPlayer(p)
         if p==AC.player then return end
+        -- Only show tag for authorized AC users
+        if not isAuthorized(p) then return end
         local function onChar(char) task.spawn(function() local head=char:WaitForChild("Head",10); if not head then return end; attachTag(char,p) end) end
         if p.Character then onChar(p.Character) end
         p.CharacterAdded:Connect(onChar)
@@ -648,6 +694,7 @@ do
     for _,p in ipairs(AC.Players:GetPlayers()) do watchPlayer(p) end
     AC.Players.PlayerAdded:Connect(watchPlayer)
     AC.Players.PlayerRemoving:Connect(function(p) if p.Character then local h=p.Character:FindFirstChild("Head"); if h then local bb=h:FindFirstChild("AC_Billboard"); if bb then bb:Destroy() end end end end)
+    ::skipTags::
 end
 
 -- HOME TAB
@@ -656,10 +703,10 @@ do
     local wCard=AC.makeCard(pg,12,72,Color3.fromRGB(18,5,30)); wCard.Size=UDim2.new(1,-24,0,72)
     local wg=Instance.new("UIGradient",wCard); wg.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(40,8,65)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,2,18))}; wg.Rotation=135
     local wt=Instance.new("TextLabel",wCard); wt.Size=UDim2.new(1,-20,0,32); wt.Position=UDim2.new(0,14,0,8); wt.BackgroundTransparency=1; wt.Text="Welcome, "..AC.player.Name; wt.TextColor3=AC.TXT_WHITE; wt.TextSize=20; wt.Font=Enum.Font.GothamBold; wt.TextXAlignment=Enum.TextXAlignment.Left
-    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.33  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
+    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.44  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
     local cW=math.floor((AC.MAIN_W-24-16)/3)
     local function ic(label,val,col,vc) local c=Instance.new("Frame",pg); c.Size=UDim2.new(0,cW,0,56); c.Position=UDim2.new(0,12+col*(cW+8),0,96); c.BackgroundColor3=AC.BG_CARD; Instance.new("UICorner",c).CornerRadius=UDim.new(0,8); local ll=Instance.new("TextLabel",c); ll.Size=UDim2.new(1,-10,0,16); ll.Position=UDim2.new(0,10,0,8); ll.BackgroundTransparency=1; ll.Text=label; ll.TextColor3=AC.TXT_DIM; ll.TextSize=10; ll.Font=Enum.Font.Gotham; ll.TextXAlignment=Enum.TextXAlignment.Left; local vl=Instance.new("TextLabel",c); vl.Size=UDim2.new(1,-10,0,24); vl.Position=UDim2.new(0,10,0,26); vl.BackgroundTransparency=1; vl.Text=val; vl.TextColor3=vc or AC.TXT_WHITE; vl.TextSize=14; vl.Font=Enum.Font.GothamBold; vl.TextXAlignment=Enum.TextXAlignment.Left end
-    ic("Version","v4.33",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
+    ic("Version","v4.44",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
     AC.sectionLbl(pg,"CHANGELOG",164)
     local clOuter=Instance.new("Frame",pg); clOuter.Size=UDim2.new(1,-24,0,230); clOuter.Position=UDim2.new(0,12,0,182); clOuter.BackgroundColor3=AC.BG_CARD; clOuter.ClipsDescendants=true; Instance.new("UICorner",clOuter).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",clOuter).Color=AC.PUR_STROKE
     local cl=Instance.new("ScrollingFrame",clOuter); cl.Size=UDim2.new(1,0,1,0); cl.BackgroundTransparency=1; cl.BorderSizePixel=0; cl.ScrollBarThickness=3; cl.ScrollBarImageColor3=AC.PUR_MID; cl.AutomaticCanvasSize=Enum.AutomaticSize.Y; cl.CanvasSize=UDim2.new(0,0,0,0)
@@ -667,7 +714,7 @@ do
     local clPP=Instance.new("UIPadding",cl); clPP.PaddingTop=UDim.new(0,6); clPP.PaddingLeft=UDim.new(0,10); clPP.PaddingRight=UDim.new(0,10); clPP.PaddingBottom=UDim.new(0,6)
     local clOrd=0
     local function cll(t,sz,c2,f) clOrd=clOrd+1; local l=Instance.new("TextLabel",cl); l.Size=UDim2.new(1,0,0,sz+6); l.BackgroundTransparency=1; l.Text=t; l.TextColor3=c2; l.TextSize=sz; l.Font=f or Enum.Font.Gotham; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextWrapped=true; l.LayoutOrder=clOrd end
-    cll("v4.33  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
+    cll("v4.44  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
     cll("FIX: FacBang panel rendering fixed (ClipsDescendants + solid bg).",10,AC.TXT_MAIN)
     cll("CHANGE: Main UI narrowed from 820px to 720px (same height).",10,AC.TXT_MAIN)
     cll("CHANGE: Sidebar narrowed from 180px to 160px to match new width.",10,AC.TXT_MAIN)
@@ -720,7 +767,15 @@ do
                     local row=Instance.new("TextButton",ddScroll); row.Size=UDim2.new(1,0,0,36); row.BackgroundColor3=Color3.fromRGB(22,22,22); row.Text=p.Name; row.Name=p.Name; row.ZIndex=502; row.TextColor3=AC.TXT_WHITE; row.TextSize=13; row.Font=Enum.Font.GothamBold; row.TextXAlignment=Enum.TextXAlignment.Left; row.AutoButtonColor=false
                     local _pad=Instance.new("UIPadding",row); _pad.PaddingLeft=UDim.new(0,10); Instance.new("UICorner",row).CornerRadius=UDim.new(0,6)
                     local pCopy=p
-                    row.MouseButton1Click:Connect(function() ddSelecting=true; AC.selectedTarget=pCopy; sBox.Text=pCopy.Name; ddFrame.Visible=false; sBox:ReleaseFocus(); AC.toast("Target: "..pCopy.Name,AC.PUR_BRIGHT); task.delay(0.3,function() ddSelecting=false end) end)
+                    row.MouseButton1Click:Connect(function()
+                        ddSelecting=true
+                        AC.selectedTarget=pCopy
+                        sBox.Text=pCopy.Name
+                        ddFrame.Visible=false
+                        sBox:ReleaseFocus()
+                        AC.toast("Target: "..pCopy.Name,AC.PUR_BRIGHT)
+                        task.delay(0.5,function() ddSelecting=false end)
+                    end)
                     row.MouseEnter:Connect(function() AC.TS:Create(row,TweenInfo.new(0.1),{BackgroundColor3=AC.PUR_DARK}):Play() end)
                     row.MouseLeave:Connect(function() AC.TS:Create(row,TweenInfo.new(0.1),{BackgroundColor3=Color3.fromRGB(22,22,22)}):Play() end)
                 end
@@ -730,15 +785,24 @@ do
         local ddH=math.min(count*38+8,180); local ap=sc.AbsolutePosition; local as=sc.AbsoluteSize
         ddFrame.Position=UDim2.new(0,ap.X,0,ap.Y+as.Y+2); ddFrame.Size=UDim2.new(0,as.X,0,ddH); ddFrame.Visible=true
     end
-    sBox:GetPropertyChangedSignal("Text"):Connect(function() if not ddSelecting then if sBox.Text=="" then AC.selectedTarget=nil end; rebuildDropdown(sBox.Text) end end)
-    sBox.Focused:Connect(function() if not ddSelecting then rebuildDropdown(sBox.Text) end end)
-    sBox.FocusLost:Connect(function() task.wait(0.18); if not ddSelecting then ddFrame.Visible=false end end)
+    local sBoxFocused=false
+    sBox.Focused:Connect(function() sBoxFocused=true; if not ddSelecting then rebuildDropdown(sBox.Text) end end)
+    sBox.FocusLost:Connect(function() sBoxFocused=false; task.wait(0.4); if not ddSelecting then ddFrame.Visible=false end end)
+    sBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if ddSelecting then return end
+        if sBoxFocused then
+            if sBox.Text=="" then AC.selectedTarget=nil end
+            rebuildDropdown(sBox.Text)
+        else
+            ddFrame.Visible=false  -- programmatic change, never show dropdown
+        end
+    end)
     AC.Players.PlayerRemoving:Connect(function(p) if AC.selectedTarget==p then AC.selectedTarget=nil; sBox.Text="" end end)
-    -- Close dropdown when clicking anywhere outside it
+    -- Close dropdown on outside click
     AC.UIS.InputBegan:Connect(function(i)
         pcall(function()
-            if i.UserInputType==Enum.UserInputType.MouseButton1 and ddFrame.Visible then
-                task.wait(0.05); if not ddSelecting then ddFrame.Visible=false end
+            if i.UserInputType==Enum.UserInputType.MouseButton1 and ddFrame.Visible and not ddSelecting then
+                task.wait(0.15); if not ddSelecting then ddFrame.Visible=false end
             end
         end)
     end)
@@ -916,39 +980,56 @@ do
 
             local _, floorY = findFloor()
 
-            -- Roblox max part size = 2048 studs
-            -- Tile a 41x41 grid = 82,000 x 82,000 studs total (~50 miles each direction)
             local TILE=2048
-            local GRID=21  -- 21x21 = 441 tiles, 42,000 studs each direction, no lag
+            local GRID=21
             local HALF=math.floor(GRID/2)
             local tileY=floorY-0.5
             local totalTiles=GRID*GRID
             local built=0
 
-            -- Use a folder to keep workspace clean
             local folder=Instance.new("Folder",AC.WS); folder.Name="AC_InfiniteBaseplate"
 
-            task.spawn(function()
-                for gx=-HALF,HALF do
-                    for gz=-HALF,HALF do
-                        local bp=Instance.new("Part")
-                        bp.Name="tile"
-                        bp.Size=Vector3.new(TILE,1,TILE)
-                        bp.CFrame=CFrame.new(gx*TILE, tileY, gz*TILE)
-                        bp.Anchored=true
-                        bp.CanCollide=true
-                        bp.CastShadow=false
-                        bp.Locked=true
-                        bp.Material=Enum.Material.SmoothPlastic
-                        bp.Transparency=0.92
-                        bp.TopSurface=Enum.SurfaceType.Smooth
-                        bp.BottomSurface=Enum.SurfaceType.Smooth
-                        bp.Parent=folder
-                        built=built+1
-                        if built%50==0 then task.wait() end
-                    end
+            -- Build center-outward so player's immediate area is always covered first
+            -- Generate all grid coords sorted by distance from center (0,0)
+            local coords={}
+            for gx=-HALF,HALF do
+                for gz=-HALF,HALF do
+                    coords[#coords+1]={gx,gz,gx*gx+gz*gz}
                 end
-                AC.toast("Baseplate ON ("..totalTiles.." tiles, ~42k studs)",AC.PUR_BRIGHT)
+            end
+            table.sort(coords,function(a,b) return a[3]<b[3] end)
+
+            local function makeTile(gx,gz)
+                local bp=Instance.new("Part")
+                bp.Name="tile"
+                bp.Size=Vector3.new(TILE,1,TILE)
+                bp.CFrame=CFrame.new(gx*TILE, tileY, gz*TILE)
+                bp.Anchored=true
+                bp.CanCollide=true
+                bp.CastShadow=false
+                bp.Locked=true
+                bp.Material=Enum.Material.SmoothPlastic
+                bp.Transparency=1           -- fully invisible = zero GPU render cost
+                bp.TopSurface=Enum.SurfaceType.Smooth
+                bp.BottomSurface=Enum.SurfaceType.Smooth
+                -- Lowest possible render fidelity - collision only, no visual mesh work
+                pcall(function() bp.RenderFidelity=Enum.RenderFidelity.Automatic end)
+                bp.Parent=folder
+            end
+
+            task.spawn(function()
+                -- Build first 9 tiles (3x3 center) instantly with no yield - covers player immediately
+                for i=1,math.min(9,#coords) do
+                    makeTile(coords[i][1],coords[i][2])
+                    built=built+1
+                end
+                -- Build remaining tiles 25 at a time
+                for i=10,#coords do
+                    makeTile(coords[i][1],coords[i][2])
+                    built=built+1
+                    if built%25==0 then task.wait() end
+                end
+                AC.toast("Baseplate ON ("..totalTiles.." tiles)",AC.PUR_BRIGHT)
             end)
             AC.baseplateRef=folder
             AC.toast("Building baseplate...",AC.ORANGE_W)
@@ -1049,7 +1130,7 @@ do
         end)
     end
     -- RN PANEL
-    local RN_W,RN_H=340,520
+    local RN_W,RN_H=320,490
     local rnPanel=Instance.new("Frame",AC.screenGui); rnPanel.Size=UDim2.new(0,RN_W,0,RN_H); rnPanel.Position=UDim2.new(0, math.floor(AC.camera.ViewportSize.X/2)-170, 0, math.floor(AC.camera.ViewportSize.Y/2)-260); rnPanel.BackgroundColor3=Color3.fromRGB(12,12,14); rnPanel.BackgroundTransparency=0.18; rnPanel.ZIndex=70; rnPanel.Visible=false; rnPanel.ClipsDescendants=true; Instance.new("UICorner",rnPanel).CornerRadius=UDim.new(0,10); Instance.new("UIStroke",rnPanel).Color=AC.PUR_STROKE
     local rnHdr=Instance.new("Frame",rnPanel); rnHdr.Size=UDim2.new(1,0,0,40); rnHdr.BackgroundColor3=Color3.fromRGB(8,8,10); rnHdr.BackgroundTransparency=0.2; rnHdr.ZIndex=71; Instance.new("UICorner",rnHdr).CornerRadius=UDim.new(0,10)
     local rnEnTog=Instance.new("TextButton",rnHdr); rnEnTog.Size=UDim2.new(0,36,0,20); rnEnTog.Position=UDim2.new(0,8,0.5,-10); rnEnTog.BackgroundColor3=Color3.fromRGB(40,40,40); rnEnTog.Text=""; rnEnTog.ZIndex=72; Instance.new("UICorner",rnEnTog).CornerRadius=UDim.new(1,0)
@@ -1061,12 +1142,12 @@ do
     local rnTabAll=Instance.new("TextButton",rnTabBar); rnTabAll.Size=UDim2.new(0.5,0,1,0); rnTabAll.BackgroundColor3=AC.PUR_DARK; rnTabAll.Text="All"; rnTabAll.TextColor3=AC.TXT_WHITE; rnTabAll.TextSize=12; rnTabAll.Font=Enum.Font.GothamBold; rnTabAll.ZIndex=72; Instance.new("UICorner",rnTabAll).CornerRadius=UDim.new(0,6)
     local rnTabFav=Instance.new("TextButton",rnTabBar); rnTabFav.Size=UDim2.new(0.5,0,1,0); rnTabFav.Position=UDim2.new(0.5,0,0,0); rnTabFav.BackgroundColor3=Color3.fromRGB(22,22,22); rnTabFav.BackgroundTransparency=0.5; rnTabFav.Text="Favs"; rnTabFav.TextColor3=AC.TXT_DIM; rnTabFav.TextSize=12; rnTabFav.Font=Enum.Font.Gotham; rnTabFav.ZIndex=72; Instance.new("UICorner",rnTabFav).CornerRadius=UDim.new(0,6)
     local rnSearch=Instance.new("TextBox",rnPanel); rnSearch.Size=UDim2.new(1,-16,0,26); rnSearch.Position=UDim2.new(0,8,0,76); rnSearch.BackgroundColor3=Color3.fromRGB(20,20,24); rnSearch.BackgroundTransparency=0.3; rnSearch.PlaceholderText="Search..."; rnSearch.PlaceholderColor3=AC.TXT_DIM; rnSearch.Text=""; rnSearch.TextColor3=AC.TXT_MAIN; rnSearch.TextSize=12; rnSearch.Font=Enum.Font.Gotham; rnSearch.ClearTextOnFocus=false; rnSearch.ZIndex=71; Instance.new("UICorner",rnSearch).CornerRadius=UDim.new(0,7); Instance.new("UIStroke",rnSearch).Color=AC.PUR_STROKE; Instance.new("UIPadding",rnSearch).PaddingLeft=UDim.new(0,8)
-    local rnScroll=Instance.new("ScrollingFrame",rnPanel); rnScroll.Size=UDim2.new(1,-16,0,248); rnScroll.Position=UDim2.new(0,8,0,108); rnScroll.BackgroundTransparency=1; rnScroll.BorderSizePixel=0; rnScroll.ScrollBarThickness=3; rnScroll.ScrollBarImageColor3=AC.PUR_MID; rnScroll.AutomaticCanvasSize=Enum.AutomaticSize.None; rnScroll.CanvasSize=UDim2.new(0,0,0,0); rnScroll.ZIndex=71
+    local rnScroll=Instance.new("ScrollingFrame",rnPanel); rnScroll.Size=UDim2.new(1,-16,0,230); rnScroll.Position=UDim2.new(0,8,0,108); rnScroll.BackgroundTransparency=1; rnScroll.BorderSizePixel=0; rnScroll.ScrollBarThickness=3; rnScroll.ScrollBarImageColor3=AC.PUR_MID; rnScroll.AutomaticCanvasSize=Enum.AutomaticSize.None; rnScroll.CanvasSize=UDim2.new(0,0,0,0); rnScroll.ZIndex=71
     local rnListLay=Instance.new("UIListLayout",rnScroll); rnListLay.FillDirection=Enum.FillDirection.Vertical; rnListLay.Padding=UDim.new(0,2); rnListLay.SortOrder=Enum.SortOrder.LayoutOrder
-    local rnSpdLbl=Instance.new("TextLabel",rnPanel); rnSpdLbl.Size=UDim2.new(0,55,0,14); rnSpdLbl.Position=UDim2.new(0,8,0,362); rnSpdLbl.BackgroundTransparency=1; rnSpdLbl.Text="Speed:"; rnSpdLbl.TextColor3=AC.TXT_DIM; rnSpdLbl.TextSize=10; rnSpdLbl.Font=Enum.Font.GothamBold; rnSpdLbl.ZIndex=71
-    local rnSpdVal=Instance.new("TextLabel",rnPanel); rnSpdVal.Size=UDim2.new(0,30,0,14); rnSpdVal.Position=UDim2.new(1,-68,0,362); rnSpdVal.BackgroundTransparency=1; rnSpdVal.Text="5"; rnSpdVal.TextColor3=AC.TXT_WHITE; rnSpdVal.TextSize=10; rnSpdVal.Font=Enum.Font.GothamBold; rnSpdVal.ZIndex=71
-    local rnRstSpd=Instance.new("TextButton",rnPanel); rnRstSpd.Size=UDim2.new(0,40,0,14); rnRstSpd.Position=UDim2.new(1,-8,0,362); rnRstSpd.BackgroundTransparency=1; rnRstSpd.Text="Reset"; rnRstSpd.TextColor3=AC.TXT_DIM; rnRstSpd.TextSize=9; rnRstSpd.Font=Enum.Font.Gotham; rnRstSpd.ZIndex=71
-    local rnSpdTrack=Instance.new("Frame",rnPanel); rnSpdTrack.Size=UDim2.new(1,-16,0,6); rnSpdTrack.Position=UDim2.new(0,8,0,380); rnSpdTrack.BackgroundColor3=Color3.fromRGB(30,30,35); rnSpdTrack.ZIndex=71; Instance.new("UICorner",rnSpdTrack).CornerRadius=UDim.new(1,0)
+    local rnSpdLbl=Instance.new("TextLabel",rnPanel); rnSpdLbl.Size=UDim2.new(0,55,0,14); rnSpdLbl.Position=UDim2.new(0,8,0,336); rnSpdLbl.BackgroundTransparency=1; rnSpdLbl.Text="Speed:"; rnSpdLbl.TextColor3=AC.TXT_DIM; rnSpdLbl.TextSize=10; rnSpdLbl.Font=Enum.Font.GothamBold; rnSpdLbl.ZIndex=71
+    local rnSpdVal=Instance.new("TextLabel",rnPanel); rnSpdVal.Size=UDim2.new(0,30,0,14); rnSpdVal.Position=UDim2.new(1,-68,0,336); rnSpdVal.BackgroundTransparency=1; rnSpdVal.Text="5"; rnSpdVal.TextColor3=AC.TXT_WHITE; rnSpdVal.TextSize=10; rnSpdVal.Font=Enum.Font.GothamBold; rnSpdVal.ZIndex=71
+    local rnRstSpd=Instance.new("TextButton",rnPanel); rnRstSpd.Size=UDim2.new(0,40,0,14); rnRstSpd.Position=UDim2.new(1,-8,0,336); rnRstSpd.BackgroundTransparency=1; rnRstSpd.Text="Reset"; rnRstSpd.TextColor3=AC.TXT_DIM; rnRstSpd.TextSize=9; rnRstSpd.Font=Enum.Font.Gotham; rnRstSpd.ZIndex=71
+    local rnSpdTrack=Instance.new("Frame",rnPanel); rnSpdTrack.Size=UDim2.new(1,-16,0,6); rnSpdTrack.Position=UDim2.new(0,8,0,354); rnSpdTrack.BackgroundColor3=Color3.fromRGB(30,30,35); rnSpdTrack.ZIndex=71; Instance.new("UICorner",rnSpdTrack).CornerRadius=UDim.new(1,0)
     local rnSpdFill=Instance.new("Frame",rnSpdTrack); rnSpdFill.Size=UDim2.new(0.5,0,1,0); rnSpdFill.BackgroundColor3=AC.PUR_MID; rnSpdFill.ZIndex=72; Instance.new("UICorner",rnSpdFill).CornerRadius=UDim.new(1,0)
     local rnSpdKnob=Instance.new("TextButton",rnSpdTrack); rnSpdKnob.Size=UDim2.new(0,14,0,14); rnSpdKnob.Position=UDim2.new(0.5,-7,0.5,-7); rnSpdKnob.BackgroundColor3=AC.PUR_GLOW; rnSpdKnob.Text=""; rnSpdKnob.ZIndex=73; Instance.new("UICorner",rnSpdKnob).CornerRadius=UDim.new(1,0)
     local rnSpdCur=5.0
@@ -1083,13 +1164,26 @@ do
     -- Number speed bind row (like AK) - 5 boxes with preset speeds + keybind each
     local RN_NUM_VALS={1,3,5,7,9}; local rnNumBinds={}
     local rnNumSaved=readData("rn_numBinds.json",{})
-    local rnNBW=math.floor((RN_W-16-4*4)/5)
-    local rnNumRowF=Instance.new("Frame",rnPanel); rnNumRowF.Size=UDim2.new(1,-16,0,52); rnNumRowF.Position=UDim2.new(0,8,0,392); rnNumRowF.BackgroundTransparency=1; rnNumRowF.ZIndex=71
+    local rnNBW=math.floor((320-16-4*4)/5)
+    local rnNumRowF=Instance.new("Frame",rnPanel); rnNumRowF.Size=UDim2.new(1,-16,0,52); rnNumRowF.Position=UDim2.new(0,8,0,368); rnNumRowF.BackgroundTransparency=1; rnNumRowF.ZIndex=71
     for i,nv in ipairs(RN_NUM_VALS) do
         local xOff=(i-1)*(rnNBW+4)
         -- Speed value box (editable)
-        local nb=Instance.new("TextBox",rnNumRowF); nb.Size=UDim2.new(0,rnNBW,0,22); nb.Position=UDim2.new(0,xOff,0,0); nb.BackgroundColor3=Color3.fromRGB(20,20,24); nb.BackgroundTransparency=0.2; nb.Text=""; nb.PlaceholderText=tostring(nv); nb.PlaceholderColor3=Color3.fromRGB(80,80,100); nb.TextColor3=AC.TXT_WHITE; nb.TextSize=11; nb.Font=Enum.Font.GothamBold; nb.ZIndex=72; nb.ClearTextOnFocus=false; Instance.new("UICorner",nb).CornerRadius=UDim.new(0,5); Instance.new("UIStroke",nb).Color=AC.PUR_STROKE
-        nb.FocusLost:Connect(function(enter) if enter and nb.Text~="" then local v=tonumber(nb.Text); if v and v>0 then setRnSpd(math.clamp(v,0.1,12)) end end end)
+        local nb=Instance.new("TextBox",rnNumRowF); nb.Size=UDim2.new(0,rnNBW,0,22); nb.Position=UDim2.new(0,xOff,0,0); nb.BackgroundColor3=Color3.fromRGB(20,20,24); nb.BackgroundTransparency=0.2; nb.Text=""; nb.PlaceholderText="0"; nb.PlaceholderColor3=Color3.fromRGB(80,80,100); nb.TextColor3=AC.TXT_WHITE; nb.TextSize=11; nb.Font=Enum.Font.GothamBold; nb.ZIndex=72; nb.ClearTextOnFocus=false; Instance.new("UICorner",nb).CornerRadius=UDim.new(0,5); Instance.new("UIStroke",nb).Color=AC.PUR_STROKE
+        local savedRnVal=rnNumSaved["v"..tostring(i)]
+        if savedRnVal then nb.Text=tostring(savedRnVal) end
+        nb.FocusLost:Connect(function(enter)
+            if enter and nb.Text~="" then
+                local v=tonumber(nb.Text)
+                if v and v>0 then
+                    rnNumBinds[i]=rnNumBinds[i] or {}
+                    rnNumBinds[i].val=v
+                    setRnSpd(math.clamp(v,0.1,12))
+                    local sv={}; for si,slot in ipairs(rnNumBinds) do if slot then if slot.val then sv["v"..si]=slot.val end; if slot.savedKey then sv[tostring(si)]=slot.savedKey end end end
+                    writeData("rn_numBinds.json",sv)
+                end
+            end
+        end)
         -- Keybind button
         local kb=Instance.new("TextButton",rnNumRowF); kb.Size=UDim2.new(0,rnNBW,0,22); kb.Position=UDim2.new(0,xOff,0,26); kb.BackgroundColor3=Color3.fromRGB(20,20,24); kb.BackgroundTransparency=0.2; kb.Text="Bind"; kb.TextColor3=AC.TXT_DIM; kb.TextSize=10; kb.Font=Enum.Font.Gotham; kb.ZIndex=72; Instance.new("UICorner",kb).CornerRadius=UDim.new(0,5); Instance.new("UIStroke",kb).Color=AC.PUR_STROKE
         local savedKey=rnNumSaved[tostring(i)]
@@ -1268,7 +1362,7 @@ do
     AC.UIS.InputChanged:Connect(function(i) if rnDrag and i.UserInputType==Enum.UserInputType.MouseMovement then local d=i.Position-rnDS; rnPanel.Position=UDim2.new(0,math.clamp(rnSP.X.Offset+d.X,0,AC.camera.ViewportSize.X-RN_W),0,math.clamp(rnSP.Y.Offset+d.Y,0,AC.camera.ViewportSize.Y-RN_H)) end end)
 
     -- UGC PANEL
-    local UGC_W,UGC_H=360,520
+    local UGC_W,UGC_H=320,490
     local ugcPanel=Instance.new("Frame",AC.screenGui); ugcPanel.Size=UDim2.new(0,UGC_W,0,UGC_H); ugcPanel.Position=UDim2.new(0, math.floor(AC.camera.ViewportSize.X/2)-UGC_W/2, 0, math.floor(AC.camera.ViewportSize.Y*0.15)); ugcPanel.BackgroundColor3=Color3.fromRGB(12,12,14); ugcPanel.BackgroundTransparency=0.18; ugcPanel.ZIndex=65; ugcPanel.Visible=false; ugcPanel.ClipsDescendants=true; Instance.new("UICorner",ugcPanel).CornerRadius=UDim.new(0,10); Instance.new("UIStroke",ugcPanel).Color=AC.PUR_STROKE
     local ugcHdr=Instance.new("Frame",ugcPanel); ugcHdr.Size=UDim2.new(1,0,0,40); ugcHdr.BackgroundColor3=Color3.fromRGB(8,8,10); ugcHdr.BackgroundTransparency=0.2; ugcHdr.ZIndex=66; Instance.new("UICorner",ugcHdr).CornerRadius=UDim.new(0,10)
     local ugcTitleLbl=Instance.new("TextLabel",ugcHdr); ugcTitleLbl.Size=UDim2.new(1,-80,1,0); ugcTitleLbl.Position=UDim2.new(0,14,0,0); ugcTitleLbl.BackgroundTransparency=1; ugcTitleLbl.Text="UGC EMOTES"; ugcTitleLbl.TextColor3=AC.TXT_WHITE; ugcTitleLbl.TextSize=14; ugcTitleLbl.Font=Enum.Font.GothamBold; ugcTitleLbl.TextXAlignment=Enum.TextXAlignment.Left; ugcTitleLbl.ZIndex=67
@@ -1278,9 +1372,9 @@ do
     local UGC_TAB_NAMES={"All","Favs","States"}; local ugcTabBtns={}; local ugcActiveTab="All"
     for i,tn in ipairs(UGC_TAB_NAMES) do local tb=Instance.new("TextButton",ugcTabBar); tb.Size=UDim2.new(1/3,0,1,0); tb.Position=UDim2.new((i-1)/3,0,0,0); tb.BackgroundColor3=i==1 and AC.PUR_DARK or Color3.fromRGB(22,22,22); tb.BackgroundTransparency=i==1 and 0 or 0.5; tb.Text=tn; tb.TextColor3=i==1 and AC.TXT_WHITE or AC.TXT_DIM; tb.TextSize=12; tb.Font=i==1 and Enum.Font.GothamBold or Enum.Font.Gotham; tb.ZIndex=67; Instance.new("UICorner",tb).CornerRadius=UDim.new(0,6); ugcTabBtns[tn]=tb end
     local ugcSrch=Instance.new("TextBox",ugcPanel); ugcSrch.Size=UDim2.new(1,-16,0,26); ugcSrch.Position=UDim2.new(0,8,0,76); ugcSrch.BackgroundColor3=Color3.fromRGB(20,20,24); ugcSrch.BackgroundTransparency=0.3; ugcSrch.PlaceholderText="Search emotes..."; ugcSrch.PlaceholderColor3=AC.TXT_DIM; ugcSrch.Text=""; ugcSrch.TextColor3=AC.TXT_MAIN; ugcSrch.TextSize=12; ugcSrch.Font=Enum.Font.Gotham; ugcSrch.ClearTextOnFocus=false; ugcSrch.ZIndex=66; Instance.new("UICorner",ugcSrch).CornerRadius=UDim.new(0,7); Instance.new("UIStroke",ugcSrch).Color=AC.PUR_STROKE; Instance.new("UIPadding",ugcSrch).PaddingLeft=UDim.new(0,8)
-    local ugcListPage=Instance.new("Frame",ugcPanel); ugcListPage.Size=UDim2.new(1,-16,0,258); ugcListPage.Position=UDim2.new(0,8,0,108); ugcListPage.BackgroundTransparency=1; ugcListPage.ZIndex=66
+    local ugcListPage=Instance.new("Frame",ugcPanel); ugcListPage.Size=UDim2.new(1,-16,0,238); ugcListPage.Position=UDim2.new(0,8,0,108); ugcListPage.BackgroundTransparency=1; ugcListPage.ZIndex=66
     local ugcScroll=Instance.new("ScrollingFrame",ugcListPage); ugcScroll.Size=UDim2.new(1,0,1,0); ugcScroll.BackgroundTransparency=1; ugcScroll.BorderSizePixel=0; ugcScroll.ScrollBarThickness=3; ugcScroll.ScrollBarImageColor3=AC.PUR_MID; ugcScroll.AutomaticCanvasSize=Enum.AutomaticSize.Y; ugcScroll.CanvasSize=UDim2.new(0,0,0,0); ugcScroll.ZIndex=67; Instance.new("UIListLayout",ugcScroll).Padding=UDim.new(0,2)
-    local ugcStatesPage=Instance.new("Frame",ugcPanel); ugcStatesPage.Size=UDim2.new(1,-16,0,258); ugcStatesPage.Position=UDim2.new(0,8,0,108); ugcStatesPage.BackgroundTransparency=1; ugcStatesPage.Visible=false; ugcStatesPage.ZIndex=66
+    local ugcStatesPage=Instance.new("Frame",ugcPanel); ugcStatesPage.Size=UDim2.new(1,-16,0,238); ugcStatesPage.Position=UDim2.new(0,8,0,108); ugcStatesPage.BackgroundTransparency=1; ugcStatesPage.Visible=false; ugcStatesPage.ZIndex=66
     local ugcStatesSF=Instance.new("ScrollingFrame",ugcStatesPage); ugcStatesSF.Size=UDim2.new(1,0,1,0); ugcStatesSF.BackgroundTransparency=1; ugcStatesSF.BorderSizePixel=0; ugcStatesSF.ScrollBarThickness=3; ugcStatesSF.ScrollBarImageColor3=AC.PUR_MID; ugcStatesSF.AutomaticCanvasSize=Enum.AutomaticSize.Y; ugcStatesSF.CanvasSize=UDim2.new(0,0,0,0); ugcStatesSF.ZIndex=67
     local ugcStatesLL=Instance.new("UIListLayout",ugcStatesSF); ugcStatesLL.Padding=UDim.new(0,6)
     local ugcBottomBar=Instance.new("Frame",ugcPanel); ugcBottomBar.Size=UDim2.new(1,-16,0,68); ugcBottomBar.Position=UDim2.new(0,8,1,-76); ugcBottomBar.BackgroundColor3=Color3.fromRGB(14,14,18); ugcBottomBar.BackgroundTransparency=0.3; ugcBottomBar.ZIndex=66; Instance.new("UICorner",ugcBottomBar).CornerRadius=UDim.new(0,7)
@@ -1297,6 +1391,60 @@ do
     ugcSpTrk.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10); if not _ugcDC then _ugcDC=AC.RS.RenderStepped:Connect(function() setUgcSpd((AC.UIS:GetMouseLocation().X-ugcSpTrk.AbsolutePosition.X)/ugcSpTrk.AbsoluteSize.X*10) end) end end end)
     AC.UIS.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 and _ugcDC then _ugcDC:Disconnect(); _ugcDC=nil end end)
     ugcSpRst.MouseButton1Click:Connect(function() setUgcSpd(5) end); setUgcSpd(5)
+    -- Number speed bind row for UGC (same as RN panel)
+    local UGC_NUM_VALS={1,3,5,7,9}; local ugcNumBinds={}
+    local ugcNumSaved=readData("ugc_numBinds.json",{})
+    local ugcNBW=math.floor((320-16-4*4)/5)
+    local ugcNumRowF=Instance.new("Frame",ugcBottomBar); ugcNumRowF.Size=UDim2.new(1,-16,0,52); ugcNumRowF.Position=UDim2.new(0,8,0,34); ugcNumRowF.BackgroundTransparency=1; ugcNumRowF.ZIndex=67
+    -- Make bottom bar taller to fit num row
+    ugcBottomBar.Size=UDim2.new(1,-16,0,94)
+    ugcBottomBar.Position=UDim2.new(0,8,1,-102)
+    for i,nv in ipairs(UGC_NUM_VALS) do
+        local xOff=(i-1)*(ugcNBW+4)
+        local nb=Instance.new("TextBox",ugcNumRowF); nb.Size=UDim2.new(0,ugcNBW,0,22); nb.Position=UDim2.new(0,xOff,0,0); nb.BackgroundColor3=Color3.fromRGB(20,20,24); nb.BackgroundTransparency=0.2; nb.Text=""; nb.PlaceholderText="0"; nb.PlaceholderColor3=Color3.fromRGB(80,80,100); nb.TextColor3=AC.TXT_WHITE; nb.TextSize=11; nb.Font=Enum.Font.GothamBold; nb.ZIndex=68; nb.ClearTextOnFocus=false; Instance.new("UICorner",nb).CornerRadius=UDim.new(0,5); Instance.new("UIStroke",nb).Color=AC.PUR_STROKE
+        local savedVal=ugcNumSaved["v"..i]
+        if savedVal then nb.Text=tostring(savedVal) end
+        nb.FocusLost:Connect(function(enter)
+            if enter then
+                local v=tonumber(nb.Text)
+                if v and v>0 then
+                    ugcNumBinds[i]=ugcNumBinds[i] or {}
+                    ugcNumBinds[i].val=v
+                    local sv={}; for si,slot in ipairs(ugcNumBinds) do if slot and slot.val then sv["v"..si]=slot.val end end
+                    writeData("ugc_numBinds.json",sv)
+                end
+            end
+        end)
+        local kb=Instance.new("TextButton",ugcNumRowF); kb.Size=UDim2.new(0,ugcNBW,0,22); kb.Position=UDim2.new(0,xOff,0,26); kb.BackgroundColor3=Color3.fromRGB(20,20,24); kb.BackgroundTransparency=0.2; kb.Text="Bind"; kb.TextColor3=AC.TXT_DIM; kb.TextSize=10; kb.Font=Enum.Font.Gotham; kb.ZIndex=68; Instance.new("UICorner",kb).CornerRadius=UDim.new(0,5); Instance.new("UIStroke",kb).Color=AC.PUR_STROKE
+        local savedKey=ugcNumSaved["k"..i]
+        ugcNumBinds[i]={savedKey=savedKey,val=savedVal or nv,kb=kb}
+        if savedKey then kb.Text=savedKey:sub(1,4); kb.TextColor3=AC.TXT_WHITE end
+        local kL=false; local kC=nil; local idx=i
+        kb.MouseButton1Click:Connect(function()
+            if kL then kL=false; if kC then kC:Disconnect(); kC=nil end; kb.Text=ugcNumBinds[idx].savedKey and ugcNumBinds[idx].savedKey:sub(1,4) or "Bind"; kb.TextColor3=ugcNumBinds[idx].savedKey and AC.TXT_WHITE or AC.TXT_DIM; return end
+            kL=true; kb.Text="..."; kb.TextColor3=AC.PUR_GLOW
+            kC=AC.UIS.InputBegan:Connect(function(inp,gp)
+                pcall(function()
+                    if gp or inp.UserInputType~=Enum.UserInputType.Keyboard then return end
+                    local kn=inp.KeyCode.Name; if not kn or kn=="" or kn=="Unknown" then return end
+                    if kn=="Escape" then kL=false; if kC then kC:Disconnect(); kC=nil end; kb.Text=ugcNumBinds[idx].savedKey and ugcNumBinds[idx].savedKey:sub(1,4) or "Bind"; kb.TextColor3=ugcNumBinds[idx].savedKey and AC.TXT_WHITE or AC.TXT_DIM; return end
+                    ugcNumBinds[idx].savedKey=kn; kb.Text=kn:sub(1,4); kb.TextColor3=AC.TXT_WHITE
+                    kL=false; if kC then kC:Disconnect(); kC=nil end
+                    local sv={}; for si,slot in ipairs(ugcNumBinds) do if slot then if slot.val then sv["v"..si]=slot.val end; if slot.savedKey then sv["k"..si]=slot.savedKey end end end
+                    writeData("ugc_numBinds.json",sv)
+                    AC.toast("UGC bind "..tostring(idx).." → ["..kn.."]",AC.PUR_BRIGHT)
+                end)
+            end)
+        end)
+    end
+    -- Global handler for UGC number speed binds
+    AC.UIS.InputBegan:Connect(function(inp,gp)
+        pcall(function()
+            if gp or inp.UserInputType~=Enum.UserInputType.Keyboard then return end
+            local kn=inp.KeyCode.Name; if not kn or kn=="" or kn=="Unknown" then return end
+            for _,slot in ipairs(ugcNumBinds) do if slot and slot.savedKey==kn then setUgcSpd(slot.val or 5) end end
+        end)
+    end)
     local ugcFavs={}; local ugcBinds={}
     do local fl=readData("ugc_favs.json",{}); for _,id in ipairs(fl) do ugcFavs[tostring(id)]=true end; local bl=readData("ugc_binds.json",{}); for k,v in pairs(bl) do ugcBinds[k]=v end end
     local function saveUgcFavs() local l={}; for k in pairs(ugcFavs) do l[#l+1]=k end; writeData("ugc_favs.json",l) end
@@ -1587,7 +1735,7 @@ do
     AC.sectionLbl(pg,"SYSTEM",314); AC.cmdListBtn=AC.makeBtn(pg,"Command List",332,40)
     AC.sectionLbl(pg,"CREDITS",384)
     local crd=AC.makeCard(pg,402,66,AC.BG_CARD)
-    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.33  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
+    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.44  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
     local cr2=Instance.new("TextLabel",crd); cr2.Size=UDim2.new(1,-16,0,14); cr2.Position=UDim2.new(0,12,0,28); cr2.BackgroundTransparency=1; cr2.Text="Inspired by IY, SystemBroken, Empty Tools, Onyx V2, AKADMIN, Bleed"; cr2.TextColor3=AC.TXT_DIM; cr2.TextSize=10; cr2.Font=Enum.Font.Gotham; cr2.TextXAlignment=Enum.TextXAlignment.Left
     btn.MouseButton1Click:Connect(function() AC.switchTab("Misc") end)
 end
@@ -1777,41 +1925,47 @@ do
         return best
     end
     local function fbStop()
-        fbActive=false
+        -- Disconnect FIRST before anything else so no more CFrame updates
         if fbConn then fbConn:Disconnect(); fbConn=nil end
+        fbActive=false
+        fbLastTarget=nil
+
         local myChar=AC.player.Character
         if myChar then
             local mr=myChar:FindFirstChild("HumanoidRootPart")
             local hum=myChar:FindFirstChildOfClass("Humanoid")
             if mr then
-                -- Zero out all velocity BEFORE releasing PlatformStand
-                -- This prevents the fling from accumulated CFrame movement
+                -- Zero velocity immediately
                 pcall(function() mr.AssemblyLinearVelocity=Vector3.zero end)
                 pcall(function() mr.AssemblyAngularVelocity=Vector3.zero end)
-                -- Snap upright so physics resumes from a clean standing pose
-                local safePos=mr.CFrame.Position
-                mr.CFrame=CFrame.new(safePos)*CFrame.Angles(0,select(2,mr.CFrame:ToEulerAnglesYXZ()),0)
+                -- Snap upright
+                local p=mr.CFrame.Position
+                mr.CFrame=CFrame.new(p)*CFrame.Angles(0,select(2,mr.CFrame:ToEulerAnglesYXZ()),0)
             end
-            -- Small delay so velocity zeroing takes effect before physics resumes
-            task.defer(function()
+            if hum then
+                -- Release PlatformStand IMMEDIATELY - no defer
+                hum.PlatformStand=false
+                -- Force the humanoid back to running state
+                pcall(function() hum:ChangeState(Enum.HumanoidStateType.Running) end)
+            end
+            -- One follow-up check after 0.1s in case state didn't take
+            task.delay(0.1, function()
                 pcall(function()
                     if myChar and myChar.Parent then
-                        local h2=myChar:FindFirstChildOfClass("Humanoid")
-                        if h2 then
-                            h2.PlatformStand=false
-                            pcall(function() h2:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+                        local h=myChar:FindFirstChildOfClass("Humanoid")
+                        if h then
+                            h.PlatformStand=false
+                            pcall(function() h:ChangeState(Enum.HumanoidStateType.Running) end)
                         end
-                        local mr2=myChar:FindFirstChild("HumanoidRootPart")
-                        if mr2 then
-                            pcall(function() mr2.AssemblyLinearVelocity=Vector3.zero end)
-                        end
+                        local r=myChar:FindFirstChild("HumanoidRootPart")
+                        if r then pcall(function() r.AssemblyLinearVelocity=Vector3.zero end) end
                     end
                 end)
             end)
         end
         AC.TS:Create(fbTrk,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(40,40,40)}):Play()
         AC.TS:Create(fbKnob,TweenInfo.new(0.2),{Position=UDim2.new(0,3,0.5,-9),BackgroundColor3=AC.TXT_DIM}):Play()
-        fbStatus.Text="Target: none  |  Status: OFF"; fbLastTarget=nil
+        fbStatus.Text="Target: none  |  Status: OFF"
         AC.toast("FaceBang OFF",AC.ORANGE_W)
     end
     local function fbStart()
@@ -1876,10 +2030,34 @@ end
 
 -- QUICK BAR
 do
-    local qBar=Instance.new("Frame",AC.screenGui); qBar.Size=UDim2.new(0,186,0,44); qBar.Position=UDim2.new(0,10,1,-62); qBar.BackgroundColor3=Color3.fromRGB(8,8,8); qBar.BackgroundTransparency=0.15; qBar.ZIndex=400; qBar.ClipsDescendants=false; Instance.new("UICorner",qBar).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",qBar).Color=AC.PUR_STROKE
-    local qDrag,qDS,qSP=false,nil,nil
-    qBar.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then qDrag=true; qDS=i.Position; qSP=qBar.Position; i.Changed:Connect(function() if i.UserInputState==Enum.UserInputState.End then qDrag=false end end) end end)
-    AC.UIS.InputChanged:Connect(function(i) if qDrag and i.UserInputType==Enum.UserInputType.MouseMovement then local d=i.Position-qDS; qBar.Position=UDim2.new(qSP.X.Scale,qSP.X.Offset+d.X,qSP.Y.Scale,qSP.Y.Offset+d.Y) end end)
+    local qBar=Instance.new("Frame",AC.screenGui); qBar.Size=UDim2.new(0,186,0,44); qBar.BackgroundColor3=Color3.fromRGB(8,8,8); qBar.BackgroundTransparency=0.15; qBar.ZIndex=400; qBar.ClipsDescendants=false; Instance.new("UICorner",qBar).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",qBar).Color=AC.PUR_STROKE
+    -- Set position after one frame so ViewportSize is ready
+    task.defer(function()
+        local vp=AC.camera.ViewportSize
+        qBar.Position=UDim2.new(0,10,0,vp.Y-62)
+    end)
+    local qDrag=false; local qDS=nil; local qSPx=0; local qSPy=0
+    qBar.InputBegan:Connect(function(i)
+        if i.UserInputType==Enum.UserInputType.MouseButton1 then
+            qDrag=true
+            qDS=i.Position
+            -- Capture current absolute position at drag start
+            qSPx=qBar.Position.X.Offset
+            qSPy=qBar.Position.Y.Offset
+            i.Changed:Connect(function()
+                if i.UserInputState==Enum.UserInputState.End then qDrag=false end
+            end)
+        end
+    end)
+    AC.UIS.InputChanged:Connect(function(i)
+        if qDrag and i.UserInputType==Enum.UserInputType.MouseMovement then
+            local d=i.Position-qDS
+            local vp=AC.camera.ViewportSize
+            local nx=math.clamp(qSPx+d.X, 0, vp.X-186)
+            local ny=math.clamp(qSPy+d.Y, 0, vp.Y-44)
+            qBar.Position=UDim2.new(0,nx,0,ny)
+        end
+    end)
     local qL=Instance.new("TextLabel",qBar); qL.Size=UDim2.new(0,28,1,0); qL.Position=UDim2.new(0,8,0,0); qL.BackgroundTransparency=1; qL.Text="AC"; qL.TextColor3=AC.PUR_GLOW; qL.TextSize=11; qL.Font=Enum.Font.GothamBold; qL.ZIndex=401
     local function makeChip(label,xOff,onColor,onToggle)
         local chip=Instance.new("TextButton",qBar); chip.Size=UDim2.new(0,44,0,30); chip.Position=UDim2.new(0,xOff,0.5,-15); chip.BackgroundColor3=Color3.fromRGB(22,22,22); chip.Text=label; chip.TextColor3=AC.TXT_DIM; chip.TextSize=10; chip.Font=Enum.Font.GothamBold; chip.ZIndex=401; Instance.new("UICorner",chip).CornerRadius=UDim.new(1,0); local cs=Instance.new("UIStroke",chip); cs.Color=AC.PUR_STROKE; cs.Thickness=1; cs.Transparency=0.5
@@ -1915,8 +2093,8 @@ do
         }):Play()
         task.delay(0.5,function() AC._uiOpen=true end)
     end)
-    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.33 loaded!  G = toggle") end)
-    print("AC AudioCrafter V4.33  by MelodyCrafter")
+    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.44 loaded!  G = toggle") end)
+    print("AC AudioCrafter V4.44  by MelodyCrafter")
     print("  G = toggle UI | Emotes tab: Reanimation + Open Emote Menu")
 end
 
