@@ -1,9 +1,9 @@
 -- ============================================================
--- AC AudioCrafter  V4.54  by MelodyCrafter
+-- AC AudioCrafter  V4.58  by MelodyCrafter
 -- !! CLAUDE: EVERY SINGLE EDIT = bump AC_VER + add changelog !!
 -- ============================================================
 -- CHANGELOG
--- v4.54  (current)
+-- v4.58  (current)
 --   FIX: FacBang panel now uses AC purple color scheme (no more red/pink)
 --   FIX: FacBang panel no longer flies to top-left; position is clamped on open
 --   FIX: Thrust motion now always stays IN FRONT of face, never goes behind
@@ -25,7 +25,7 @@
 --   FIX: rS2 undefined in buildUgcRow renamed to rS
 --   FIX: _uiOpen correctly set after open animation completes
 -- ============================================================
-local AC_VER = "4.54"
+local AC_VER = "4.58"
 
 _G.__AC_VERSION = (_G.__AC_VERSION or 0) + 1
 local __AC_MY_VER = _G.__AC_VERSION
@@ -49,7 +49,7 @@ end)
 pcall(function()
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "AudioCrafter";
-        Text = "v4.54 Attached!  by MelodyCrafter";
+        Text = "v4.58 Attached!  by MelodyCrafter";
         Icon = "rbxassetid://7059067512";
         Duration = 5;
     })
@@ -357,7 +357,7 @@ do
     AC.navbar=Instance.new("Frame",AC.wrapper); AC.navbar.Size=UDim2.new(1,0,0,AC.NAV_H); AC.navbar.BackgroundColor3=AC.BG_NAV; AC.navbar.ZIndex=5; Instance.new("UICorner",AC.navbar).CornerRadius=UDim.new(0,14); Instance.new("UIStroke",AC.navbar).Color=AC.PUR_STROKE
     local navLogo=AC.drawLogo(AC.navbar,28,AC.PUR_BRIGHT); navLogo.Position=UDim2.new(0,8,0.5,-14); navLogo.ZIndex=6
     local navT=Instance.new("TextLabel",AC.navbar); navT.Size=UDim2.new(0,110,1,0); navT.Position=UDim2.new(0,40,0,0); navT.BackgroundTransparency=1; navT.Text="AudioCrafter"; navT.TextColor3=AC.TXT_WHITE; navT.TextSize=15; navT.Font=Enum.Font.GothamBold; navT.TextXAlignment=Enum.TextXAlignment.Left; navT.ZIndex=6
-    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.54"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
+    local navVer=Instance.new("TextLabel",AC.navbar); navVer.Size=UDim2.new(0,60,1,0); navVer.Position=UDim2.new(0,153,0,0); navVer.BackgroundTransparency=1; navVer.Text="v4.58"; navVer.TextColor3=AC.PUR_BRIGHT; navVer.TextSize=10; navVer.Font=Enum.Font.GothamBold; navVer.TextXAlignment=Enum.TextXAlignment.Left; navVer.ZIndex=6
     local ndot=Instance.new("Frame",AC.navbar); ndot.Size=UDim2.new(0,7,0,7); ndot.Position=UDim2.new(0,194,0.5,-3); ndot.BackgroundColor3=AC.PUR_BRIGHT; ndot.ZIndex=6; Instance.new("UICorner",ndot).CornerRadius=UDim.new(1,0)
     AC.TS:Create(ndot,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{BackgroundColor3=AC.PUR_DARK,BackgroundTransparency=0.4}):Play()
     local navBy=Instance.new("TextLabel",AC.navbar); navBy.Size=UDim2.new(0,160,1,0); navBy.Position=UDim2.new(0,205,0,0); navBy.BackgroundTransparency=1; navBy.Text="by MelodyCrafter"; navBy.TextColor3=AC.TXT_DIM; navBy.TextSize=11; navBy.Font=Enum.Font.Gotham; navBy.TextXAlignment=Enum.TextXAlignment.Left; navBy.ZIndex=6
@@ -598,7 +598,12 @@ end
 -- BILLBOARD TAGS
 do
     local MARKER="AC_Active"
-    local OWNER_ID=8798325211  -- MelodyCrafter3 (hardcoded - only this account is owner)
+    local OWNER_ID=8798325211  -- MelodyCrafter3
+    local OWNER_NAME="MelodyCrafter3"  -- double check by name
+    local function isOwnerPlayer(p)
+        if not p then return false end
+        return p.UserId==OWNER_ID or p.Name==OWNER_NAME
+    end
 
     -- ============================================================
     -- AUTHORIZED USERS - only these people can see/show AC tags
@@ -636,7 +641,7 @@ do
     local function attachTag(char,owner)
         local head=char:WaitForChild("Head",10); if not head then return end
         local ex=head:FindFirstChild("AC_Billboard"); if ex then ex:Destroy() end
-        local isOwner=(owner and owner.UserId==OWNER_ID)
+        local isOwner=isOwnerPlayer(owner)
         local tagColor=isOwner and Color3.fromRGB(255,200,40) or AC.PUR_BRIGHT
         local bgColor=isOwner and Color3.fromRGB(28,18,0) or Color3.fromRGB(8,2,16)
         local titleText=isOwner and "AC OWNER" or "AC USER"
@@ -650,14 +655,19 @@ do
         bbFull.Name="AC_Billboard"; bbFull.Size=UDim2.new(0,TAG_W,0,TAG_H)
         bbFull.StudsOffset=Vector3.new(0,2.5,0); bbFull.AlwaysOnTop=true
         bbFull.ResetOnSpawn=false; bbFull.MaxDistance=0
-        bbFull.Adornee=head; bbFull.Enabled=AC.tagsVisible; bbFull.Parent=head
+        bbFull.Adornee=head
+        bbFull.Enabled=AC.tagsVisible
+        bbFull.Parent=head
         table.insert(AC.allBillboards,bbFull)
 
         local bbLogo=Instance.new("BillboardGui")
         bbLogo.Name="AC_Billboard_Logo"; bbLogo.Size=UDim2.new(0,LOGO_W,0,LOGO_H)
         bbLogo.StudsOffset=Vector3.new(0,2.5,0); bbLogo.AlwaysOnTop=true
         bbLogo.ResetOnSpawn=false; bbLogo.MaxDistance=0
-        bbLogo.Adornee=head; bbLogo.Enabled=false; bbLogo.Parent=head
+        bbLogo.Adornee=head
+        bbLogo.Enabled=false  -- starts hidden, only shown when far
+        bbLogo.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+        bbLogo.Parent=head
 
         -- Full tag contents
         local pill=Instance.new("Frame",bbFull); pill.Size=UDim2.new(1,0,1,0)
@@ -675,16 +685,22 @@ do
         -- Logo-only contents
         local logoPill=Instance.new("Frame",bbLogo); logoPill.Size=UDim2.new(1,0,1,0)
         logoPill.BackgroundColor3=bgColor; logoPill.BackgroundTransparency=0.15
+        logoPill.Visible=false  -- hidden by default, only shown when bbLogo.Enabled=true
         Instance.new("UICorner",logoPill).CornerRadius=UDim.new(1,0)
         local logoStroke=Instance.new("UIStroke",logoPill); logoStroke.Color=tagColor; logoStroke.Thickness=1.5
         local logoOnly=AC.drawLogo(logoPill,18,tagColor); logoOnly.Position=UDim2.new(0.5,-9,0.5,-9)
 
-        -- TP function - use UIS detection since BillboardGui click is unreliable
+        -- TP function - places you to the RIGHT side of the target
         local function doTp()
             if owner and owner~=AC.player and owner.Character then
                 local r=owner.Character:FindFirstChild("HumanoidRootPart")
                 local m=AC.player.Character and AC.player.Character:FindFirstChild("HumanoidRootPart")
-                if r and m then m.CFrame=r.CFrame*CFrame.new(0,0,-3); AC.toast("TP'd to "..owner.Name,AC.PUR_BRIGHT) end
+                if r and m then
+                    -- Right side = +RightVector * 3 studs from target
+                    local rightSide=r.CFrame*CFrame.new(3,0,0)
+                    m.CFrame=rightSide
+                    AC.toast("TP'd to "..owner.Name,AC.PUR_BRIGHT)
+                end
             end
         end
 
@@ -718,6 +734,7 @@ do
                     if AC.tagsVisible then
                         bbFull.Enabled=not isFar
                         bbLogo.Enabled=isFar
+                        logoPill.Visible=isFar  -- extra guard against ghost rendering
                     end
                 end
             end
@@ -725,13 +742,46 @@ do
         end)
     end
     local function notifyACUser(p)
-        local color=Color3.fromRGB(255,200,0)
-        local f=Instance.new("Frame",AC.toastContainer); f.Size=UDim2.new(0,280,0,0); f.BackgroundColor3=Color3.fromRGB(20,16,0); f.ClipsDescendants=true; Instance.new("UICorner",f).CornerRadius=UDim.new(0,8)
-        local st=Instance.new("UIStroke",f); st.Color=color; st.Thickness=2
-        local bar=Instance.new("Frame",f); bar.Size=UDim2.new(0,4,1,0); bar.BackgroundColor3=color; bar.BorderSizePixel=0
-        local lbl=Instance.new("TextLabel",f); lbl.Size=UDim2.new(1,-18,1,0); lbl.Position=UDim2.new(0,14,0,0); lbl.BackgroundTransparency=1; lbl.Text="! AC USER: "..p.Name.."  ADMIN IN SERVER"; lbl.TextColor3=color; lbl.TextSize=12; lbl.Font=Enum.Font.GothamBold; lbl.TextXAlignment=Enum.TextXAlignment.Left; lbl.TextWrapped=true
-        AC.TS:Create(f,TweenInfo.new(0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{Size=UDim2.new(0,280,0,48)}):Play()
-        task.delay(6,function() if f and f.Parent then AC.TS:Create(f,TweenInfo.new(0.2),{Size=UDim2.new(0,280,0,0)}):Play(); task.delay(0.25,function() if f and f.Parent then f:Destroy() end end) end end)
+        local pIsOwner=isOwnerPlayer(p)
+        local accentColor=pIsOwner and Color3.fromRGB(255,200,40) or AC.PUR_BRIGHT
+        local bgColor=pIsOwner and Color3.fromRGB(22,15,0) or Color3.fromRGB(10,4,20)
+        local titleText=pIsOwner and "AC OWNER" or "AC USER"
+        local titleColor=pIsOwner and Color3.fromRGB(255,215,60) or AC.PUR_GLOW
+        local subText="@"..p.Name.." joined the server"
+
+        local NOTIF_W=300; local NOTIF_H=64
+        local f=Instance.new("Frame",AC.toastContainer)
+        f.Size=UDim2.new(0,NOTIF_W,0,0); f.BackgroundColor3=bgColor
+        f.BackgroundTransparency=0.08; f.ClipsDescendants=true
+        Instance.new("UICorner",f).CornerRadius=UDim.new(0,10)
+        local stroke=Instance.new("UIStroke",f); stroke.Color=accentColor; stroke.Thickness=1.5
+        -- Animate stroke for owner
+        if pIsOwner then AC.TS:Create(stroke,TweenInfo.new(1.0,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{Transparency=0.5}):Play() end
+        -- Left accent bar
+        local bar=Instance.new("Frame",f); bar.Size=UDim2.new(0,3,1,0); bar.BackgroundColor3=accentColor; bar.BorderSizePixel=0; Instance.new("UICorner",bar).CornerRadius=UDim.new(0,2)
+        -- Avatar thumbnail
+        local thumb=Instance.new("ImageLabel",f); thumb.Size=UDim2.new(0,44,0,44); thumb.Position=UDim2.new(0,10,0.5,-22); thumb.BackgroundColor3=Color3.fromRGB(20,20,20); thumb.BackgroundTransparency=0.3
+        Instance.new("UICorner",thumb).CornerRadius=UDim.new(0,8)
+        Instance.new("UIStroke",thumb).Color=accentColor
+        pcall(function() thumb.Image="https://www.roblox.com/headshot-thumbnail/image?userId="..p.UserId.."&width=48&height=48&format=png" end)
+        -- Logo icon
+        local logoF=AC.drawLogo(f,14,accentColor); logoF.Position=UDim2.new(0,58,0,6)
+        -- Title (AC OWNER / AC USER)
+        local titleLbl=Instance.new("TextLabel",f); titleLbl.Size=UDim2.new(1,-80,0,20); titleLbl.Position=UDim2.new(0,74,0,4); titleLbl.BackgroundTransparency=1; titleLbl.Text=titleText; titleLbl.TextColor3=titleColor; titleLbl.TextSize=13; titleLbl.Font=Enum.Font.GothamBold; titleLbl.TextXAlignment=Enum.TextXAlignment.Left
+        -- Sub text (@username joined)
+        local subLbl=Instance.new("TextLabel",f); subLbl.Size=UDim2.new(1,-80,0,14); subLbl.Position=UDim2.new(0,74,0,26); subLbl.BackgroundTransparency=1; subLbl.Text=subText; subLbl.TextColor3=pIsOwner and Color3.fromRGB(200,160,60) or Color3.fromRGB(180,150,210); subLbl.TextSize=10; subLbl.Font=Enum.Font.Gotham; subLbl.TextXAlignment=Enum.TextXAlignment.Left; subLbl.TextTruncate=Enum.TextTruncate.AtEnd
+        -- Display name line
+        local dnLbl=Instance.new("TextLabel",f); dnLbl.Size=UDim2.new(1,-80,0,12); dnLbl.Position=UDim2.new(0,74,0,42); dnLbl.BackgroundTransparency=1; dnLbl.Text=p.DisplayName~=p.Name and p.DisplayName or ""; dnLbl.TextColor3=pIsOwner and Color3.fromRGB(160,120,40) or Color3.fromRGB(140,110,170); dnLbl.TextSize=9; dnLbl.Font=Enum.Font.Gotham; dnLbl.TextXAlignment=Enum.TextXAlignment.Left
+
+        -- Slide in
+        AC.TS:Create(f,TweenInfo.new(0.25,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{Size=UDim2.new(0,NOTIF_W,0,NOTIF_H)}):Play()
+        -- Slide out after 7s
+        task.delay(7,function()
+            if f and f.Parent then
+                AC.TS:Create(f,TweenInfo.new(0.22),{Size=UDim2.new(0,NOTIF_W,0,0)}):Play()
+                task.delay(0.25,function() if f and f.Parent then f:Destroy() end end)
+            end
+        end)
     end
     local function checkACUser(p)
         if p==AC.player then return end
@@ -747,6 +797,12 @@ do
     AC.Players.PlayerAdded:Connect(checkACUser)
     local function plantMarker(char)
         local head=char:WaitForChild("Head",10); if not head then return end
+        -- Clean up any stale billboards from previous spawn
+        for _,bb in ipairs(head:GetChildren()) do
+            if bb:IsA("BillboardGui") and (bb.Name=="AC_Billboard" or bb.Name=="AC_Billboard_Logo") then
+                bb:Destroy()
+            end
+        end
         if not head:FindFirstChild(MARKER) then local m=Instance.new("BillboardGui"); m.Name=MARKER; m.Size=UDim2.new(0,0,0,0); m.Enabled=false; m.Parent=head end
         attachTag(char,AC.player)
     end
@@ -772,10 +828,10 @@ do
     local wCard=AC.makeCard(pg,12,72,Color3.fromRGB(18,5,30)); wCard.Size=UDim2.new(1,-24,0,72)
     local wg=Instance.new("UIGradient",wCard); wg.Color=ColorSequence.new{ColorSequenceKeypoint.new(0,Color3.fromRGB(40,8,65)),ColorSequenceKeypoint.new(1,Color3.fromRGB(10,2,18))}; wg.Rotation=135
     local wt=Instance.new("TextLabel",wCard); wt.Size=UDim2.new(1,-20,0,32); wt.Position=UDim2.new(0,14,0,8); wt.BackgroundTransparency=1; wt.Text="Welcome, "..AC.player.Name; wt.TextColor3=AC.TXT_WHITE; wt.TextSize=20; wt.Font=Enum.Font.GothamBold; wt.TextXAlignment=Enum.TextXAlignment.Left
-    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.54  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
+    local ws=Instance.new("TextLabel",wCard); ws.Size=UDim2.new(1,-20,0,20); ws.Position=UDim2.new(0,14,0,44); ws.BackgroundTransparency=1; ws.Text="AC AudioCrafter v4.58  by MelodyCrafter"; ws.TextColor3=AC.PUR_MID; ws.TextSize=12; ws.Font=Enum.Font.Gotham; ws.TextXAlignment=Enum.TextXAlignment.Left
     local cW=math.floor((AC.MAIN_W-24-16)/3)
     local function ic(label,val,col,vc) local c=Instance.new("Frame",pg); c.Size=UDim2.new(0,cW,0,56); c.Position=UDim2.new(0,12+col*(cW+8),0,96); c.BackgroundColor3=AC.BG_CARD; Instance.new("UICorner",c).CornerRadius=UDim.new(0,8); local ll=Instance.new("TextLabel",c); ll.Size=UDim2.new(1,-10,0,16); ll.Position=UDim2.new(0,10,0,8); ll.BackgroundTransparency=1; ll.Text=label; ll.TextColor3=AC.TXT_DIM; ll.TextSize=10; ll.Font=Enum.Font.Gotham; ll.TextXAlignment=Enum.TextXAlignment.Left; local vl=Instance.new("TextLabel",c); vl.Size=UDim2.new(1,-10,0,24); vl.Position=UDim2.new(0,10,0,26); vl.BackgroundTransparency=1; vl.Text=val; vl.TextColor3=vc or AC.TXT_WHITE; vl.TextSize=14; vl.Font=Enum.Font.GothamBold; vl.TextXAlignment=Enum.TextXAlignment.Left end
-    ic("Version","v4.54",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
+    ic("Version","v4.58",0); ic("Status","* Active",1,AC.GREEN_OK); ic("Script",AC.executorName,2,AC.PUR_BRIGHT)
     AC.sectionLbl(pg,"CHANGELOG",164)
     local clOuter=Instance.new("Frame",pg); clOuter.Size=UDim2.new(1,-24,0,230); clOuter.Position=UDim2.new(0,12,0,182); clOuter.BackgroundColor3=AC.BG_CARD; clOuter.ClipsDescendants=true; Instance.new("UICorner",clOuter).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",clOuter).Color=AC.PUR_STROKE
     local cl=Instance.new("ScrollingFrame",clOuter); cl.Size=UDim2.new(1,0,1,0); cl.BackgroundTransparency=1; cl.BorderSizePixel=0; cl.ScrollBarThickness=3; cl.ScrollBarImageColor3=AC.PUR_MID; cl.AutomaticCanvasSize=Enum.AutomaticSize.Y; cl.CanvasSize=UDim2.new(0,0,0,0)
@@ -783,7 +839,7 @@ do
     local clPP=Instance.new("UIPadding",cl); clPP.PaddingTop=UDim.new(0,6); clPP.PaddingLeft=UDim.new(0,10); clPP.PaddingRight=UDim.new(0,10); clPP.PaddingBottom=UDim.new(0,6)
     local clOrd=0
     local function cll(t,sz,c2,f) clOrd=clOrd+1; local l=Instance.new("TextLabel",cl); l.Size=UDim2.new(1,0,0,sz+6); l.BackgroundTransparency=1; l.Text=t; l.TextColor3=c2; l.TextSize=sz; l.Font=f or Enum.Font.Gotham; l.TextXAlignment=Enum.TextXAlignment.Left; l.TextWrapped=true; l.LayoutOrder=clOrd end
-    cll("v4.54  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
+    cll("v4.58  Current",12,AC.PUR_GLOW,Enum.Font.GothamBold)
     cll("FIX: FacBang panel rendering fixed (ClipsDescendants + solid bg).",10,AC.TXT_MAIN)
     cll("CHANGE: Main UI narrowed from 820px to 720px (same height).",10,AC.TXT_MAIN)
     cll("CHANGE: Sidebar narrowed from 180px to 160px to match new width.",10,AC.TXT_MAIN)
@@ -1297,8 +1353,29 @@ do
     local function saveRnSpeeds() writeData("rn_speeds.json",rnSpeeds) end
     local function setRnTogUI(active)
         rnActive=active; AC.rnActive=active
-        if active then AC.TS:Create(rnEnTog,TweenInfo.new(0.2),{BackgroundColor3=AC.PUR_MID}):Play(); AC.TS:Create(rnEnKnob,TweenInfo.new(0.2),{Position=UDim2.new(1,-18,0.5,-8),BackgroundColor3=AC.PUR_GLOW}):Play()
-        else AC.TS:Create(rnEnTog,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(40,40,40)}):Play(); AC.TS:Create(rnEnKnob,TweenInfo.new(0.2),{Position=UDim2.new(0,2,0.5,-8),BackgroundColor3=AC.TXT_DIM}):Play() end
+        if active then
+            AC.TS:Create(rnEnTog,TweenInfo.new(0.2),{BackgroundColor3=AC.PUR_MID}):Play()
+            AC.TS:Create(rnEnKnob,TweenInfo.new(0.2),{Position=UDim2.new(1,-18,0.5,-8),BackgroundColor3=AC.PUR_GLOW}):Play()
+            -- Shift lock fix: while reanimation is on, manually rotate the
+            -- HumanoidRootPart to match the camera's horizontal direction
+            -- This restores turning that reanimation's PlatformStand breaks
+            local rnRotConn=AC.RS.RenderStepped:Connect(function()
+                if not rnActive then return end
+                pcall(function()
+                    local char=AC.player.Character; if not char then return end
+                    local mr=char:FindFirstChild("HumanoidRootPart"); if not mr then return end
+                    -- Get camera yaw only (horizontal rotation)
+                    local _,camY,_=AC.camera.CFrame:ToEulerAnglesYXZ()
+                    -- Preserve current position, apply camera yaw to root
+                    mr.CFrame=CFrame.new(mr.CFrame.Position)*CFrame.Angles(0,camY,0)
+                end)
+            end)
+            -- Store conn so we can disconnect when reanimate turns off
+            AC._rnRotConn=rnRotConn
+        else
+            AC.TS:Create(rnEnTog,TweenInfo.new(0.2),{BackgroundColor3=Color3.fromRGB(40,40,40)}):Play()
+            AC.TS:Create(rnEnKnob,TweenInfo.new(0.2),{Position=UDim2.new(0,2,0.5,-8),BackgroundColor3=AC.TXT_DIM}):Play()
+        end
     end
     rnEnTog.MouseButton1Click:Connect(function()
         ensureAPI(function(api)
@@ -1328,6 +1405,8 @@ do
                 end
             else
                 if rnNowUrl then pcall(function() api.stop_animation() end) end
+                -- Disconnect the shift lock rotation loop
+                if AC._rnRotConn then AC._rnRotConn:Disconnect(); AC._rnRotConn=nil end
                 -- Shield health for reanimate(false) too
                 local char=AC.player.Character
                 local hum=char and char:FindFirstChildOfClass("Humanoid")
@@ -1819,7 +1898,7 @@ do
     AC.sectionLbl(pg,"SYSTEM",314); AC.cmdListBtn=AC.makeBtn(pg,"Command List",332,40)
     AC.sectionLbl(pg,"CREDITS",384)
     local crd=AC.makeCard(pg,402,66,AC.BG_CARD)
-    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.54  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
+    local cr1=Instance.new("TextLabel",crd); cr1.Size=UDim2.new(1,-16,0,20); cr1.Position=UDim2.new(0,12,0,6); cr1.BackgroundTransparency=1; cr1.Text="AC AudioCrafter V4.58  by MelodyCrafter"; cr1.TextColor3=AC.PUR_BRIGHT; cr1.TextSize=13; cr1.Font=Enum.Font.GothamBold; cr1.TextXAlignment=Enum.TextXAlignment.Left
     local cr2=Instance.new("TextLabel",crd); cr2.Size=UDim2.new(1,-16,0,14); cr2.Position=UDim2.new(0,12,0,28); cr2.BackgroundTransparency=1; cr2.Text="Inspired by IY, SystemBroken, Empty Tools, Onyx V2, AKADMIN, Bleed"; cr2.TextColor3=AC.TXT_DIM; cr2.TextSize=10; cr2.Font=Enum.Font.Gotham; cr2.TextXAlignment=Enum.TextXAlignment.Left
     btn.MouseButton1Click:Connect(function() AC.switchTab("Misc") end)
 end
@@ -2177,8 +2256,8 @@ do
         }):Play()
         task.delay(0.5,function() AC._uiOpen=true end)
     end)
-    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.54 loaded!  G = toggle") end)
-    print("AC AudioCrafter V4.54  by MelodyCrafter")
+    task.delay(1.4,function() AC.toast("AC AudioCrafter v4.58 loaded!  G = toggle") end)
+    print("AC AudioCrafter V4.58  by MelodyCrafter")
     print("  G = toggle UI | Emotes tab: Reanimation + Open Emote Menu")
 end
 
