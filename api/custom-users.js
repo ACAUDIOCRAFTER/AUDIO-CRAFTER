@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const token = process.env.KV_REST_API_TOKEN;
     if (!url || !token) return res.status(500).json({ error: 'KV not configured' });
 
-    const ADMIN_PASS = process.env.AC_ADMIN_PASS || 'melody2024';
+    const ADMIN_PASS = process.env.AC_ADMIN_PASS || 'ACMelodyScoper';
     const hdrs = { Authorization: 'Bearer ' + token };
     const KEY  = 'ac_custom_users';
 
