@@ -336,7 +336,7 @@ input::placeholder{color:#333}
             <label>Glow Color</label>
             <div class="color-palette" id="color-palette"></div>
             <div class="color-custom-row">
-              <input type="color" id="f-custom-color" value="#0066ff" oninput="setCustomColor(this.value)"/>
+              <input type="color" id="f-custom-color" value="#960096" oninput="setCustomColor(this.value)"/>
               <span>Custom color — click to pick</span>
             </div>
           </div>
@@ -497,7 +497,7 @@ let effects = {
   animBg:      false,
   tagEffects:  false
 }
-let glowColor = '#0066ff'
+let glowColor = '#960096'  // default matches in-game neon purple
 
 const GLOW_PRESETS = [
   {c:'#0066ff',n:'Blue'},    {c:'#00ccff',n:'Cyan'},
@@ -511,9 +511,11 @@ const GLOW_PRESETS = [
 function initColorPalette(){
   const el = document.getElementById('color-palette')
   el.innerHTML = GLOW_PRESETS.map((p,i)=>
-    `<div class="color-swatch${i===0?' selected':''}" style="background:${p.c};box-shadow:0 0 8px ${p.c}66"
+    `<div class="color-swatch${p.c.toLowerCase()===glowColor.toLowerCase()?' selected':''}"
+     style="background:${p.c};box-shadow:0 0 8px ${p.c}66"
      title="${p.n}" onclick="selectColor('${p.c}',this)"></div>`
   ).join('')
+  applyPreviewGlow(glowColor)
 }
 
 function selectColor(c, el){
@@ -1232,22 +1234,28 @@ function editTag(u){
   document.getElementById('f-bg').value=d.bgId||''
   document.getElementById('form-title').textContent='Editing: '+u
   document.getElementById('clear-btn').style.display='inline-flex'
-  // Restore effects toggles
-  if(d.effects){
-    effects = {...effects, ...d.effects}
-    Object.keys(effects).forEach(k=>{
-      const el=document.getElementById('tog-'+k)
-      if(el) el.className='toggle-switch'+(effects[k]?' on':'')
-    })
-    if(d.effects.glowColor){
-      glowColor=d.effects.glowColor
-      document.getElementById('f-custom-color').value=glowColor
-      document.querySelectorAll('.color-swatch').forEach(s=>{
-        if(s.style.background===glowColor||s.getAttribute('onclick')?.includes(glowColor)) s.classList.add('selected')
-        else s.classList.remove('selected')
-      })
-    }
-  }
+  // Restore effects toggles + glow color
+  const userEffects = d.effects || {}
+  effects = {glitched:false,typewriter:false,animProfile:false,animBg:false,tagEffects:false, ...userEffects}
+  Object.keys(effects).forEach(k=>{
+    const sw=document.getElementById('tog-'+k)
+    if(!sw) return
+    sw.className='toggle-switch'+(effects[k]?' on':'')
+    const row=sw.closest('.toggle-row')
+    if(row) row.className='toggle-row'+(effects[k]?' tog-active':'')
+  })
+  // Load glow color — from effects, or fall back to in-game default purple
+  const savedGlow = (userEffects.glowColor && userEffects.glowColor !== '') ? userEffects.glowColor : '#960096'
+  glowColor = savedGlow
+  document.getElementById('f-custom-color').value = savedGlow
+  // Try to match a preset swatch
+  document.querySelectorAll('.color-swatch').forEach(s=>{
+    const swColor = s.style.backgroundColor
+    // Convert hex to compare
+    const swHex = s.getAttribute('onclick')?.match(/'(#[0-9a-fA-F]{6})'/)?.[1]
+    s.classList.toggle('selected', swHex === savedGlow.toLowerCase())
+  })
+  applyPreviewGlow(savedGlow)
   updatePreview()
   if(d.animMeta){
     const m=d.animMeta
@@ -1283,11 +1291,16 @@ function renderTags(q=''){
     const d=tagData[u]
     const pfpUrl=d.pfpId?(d.pfpId.startsWith('http')?d.pfpId:`https://assetdelivery.roblox.com/v1/asset/?id=${d.pfpId}`):''
     const hasAnim=!!d.animMeta
+    const gc = (d.effects&&d.effects.glowColor&&d.effects.glowColor!=='') ? d.effects.glowColor : '#960096'
+    const glowDot = `<span style="width:8px;height:8px;border-radius:50%;background:${gc};box-shadow:0 0 6px ${gc};display:inline-block;flex-shrink:0" title="Glow: ${gc}"></span>`
     return`<div class="urow">
       <div class="urow-icon">${pfpUrl?`<img src="${pfpUrl}" onerror="this.style.display='none'"/>`:'👤'}</div>
       <div class="urow-info">
         <div class="urow-name">${u}</div>
-        <div class="urow-meta">${d.pfpId?'Has PFP':'No PFP'} · ${hasAnim?`Animated ${d.animMeta.totalFrames}fr`:(d.bgId?'Has BG':'No BG')} · ${d.effects?Object.entries(d.effects).filter(([k,v])=>v===true).map(([k])=>k).join(', ')||'No effects':'No effects'}</div>
+        <div class="urow-meta" style="display:flex;align-items:center;gap:6px">
+          ${d.pfpId?'Has PFP':'No PFP'} · ${hasAnim?`Animated ${d.animMeta.totalFrames}fr`:(d.bgId?'Has BG':'No BG')}
+          ${glowDot}
+        </div>
       </div>
       ${hasAnim?`<span class="chip chip-anim">🎞 GIF</span>`:`<span class="chip chip-acc">${d.tag||'—'}</span>`}
       <div class="urow-actions">
