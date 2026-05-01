@@ -161,11 +161,12 @@ input::placeholder{color:var(--dim2)}
 
           <div class="tag-preview-wrap">
             <span class="tag-preview-label">PREVIEW</span>
-            <div class="nametag">
-              <div class="nametag-pfp" id="prev-pfp-wrap">
+            <div class="nametag" id="prev-nametag" style="position:relative;overflow:hidden">
+              <img id="prev-bg" src="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.35;border-radius:99px"/>
+              <div class="nametag-pfp" id="prev-pfp-wrap" style="position:relative;z-index:1">
                 <img id="prev-pfp" src="" style="display:none"/>
               </div>
-              <div>
+              <div style="position:relative;z-index:1">
                 <div class="nametag-tag" id="prev-tag">AC USER</div>
                 <div class="nametag-user" id="prev-user">@username</div>
               </div>
@@ -235,6 +236,15 @@ function updatePreview() {
     img.style.display = 'block'
     img.onerror = () => img.style.display = 'none'
   } else { img.style.display = 'none' }
+
+  // Background preview
+  const bg    = document.getElementById('f-bg').value.trim()
+  const bgImg = document.getElementById('prev-bg')
+  if (bg) {
+    bgImg.src = bg.startsWith('http') ? bg : `https://assetdelivery.roblox.com/v1/asset/?id=${bg}`
+    bgImg.style.display = 'block'
+    bgImg.onerror = () => bgImg.style.display = 'none'
+  } else { bgImg.style.display = 'none' }
 }
 
 async function saveUser() {
