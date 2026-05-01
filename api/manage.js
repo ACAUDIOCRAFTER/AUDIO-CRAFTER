@@ -12,9 +12,17 @@ export default async function handler(req, res) {
     const token = process.env.KV_REST_API_TOKEN;
     if (!url || !token) return res.status(500).json({ error: 'KV not configured' });
 
-    const ADMIN_PASS = process.env.AC_ADMIN_PASS || 'ACMelodyScoper';
-    const EXEC_TTL   = 45;   // seconds — user disappears from live list after 45s no ping
-    const hdrs       = { Authorization: 'Bearer ' + token };
+    // ── Secrets — ALL come from Vercel env vars, nothing hardcoded ───────────
+    // Set these in Vercel dashboard → Project → Settings → Environment Variables:
+    //   AC_ADMIN_PASS   = your admin panel password
+    //   AC_EXEC_SECRET  = a random string only your Lua script knows (e.g. "xK9mP2qR")
+    const ADMIN_PASS  = process.env.AC_ADMIN_PASS;
+    const EXEC_SECRET = process.env.AC_EXEC_SECRET;  // shared secret for exec pings
+    const EXEC_TTL    = 45; // seconds before user drops off live list
+    const hdrs        = { Authorization: 'Bearer ' + token };
+
+    if (!ADMIN_PASS)  return res.status(500).json({ error: 'AC_ADMIN_PASS env var not set' });
+    if (!EXEC_SECRET) return res.status(500).json({ error: 'AC_EXEC_SECRET env var not set' });
 
     // ── KV helpers (exact same pattern as custom-users.js) ───────────────────
 
@@ -44,12 +52,20 @@ export default async function handler(req, res) {
             .map(([u]) => u);
     }
 
-    // ── Script pings — no auth, called from Roblox executor ──────────────────
+    // ── Script pings — protected by EXEC_SECRET, no admin auth needed ────────
 
-    // POST /api/manage?action=exec&user=USERNAME  (every 20s from Lua)
-    if (req.method === 'POST' && req.query.action === 'exec' && req.query.user) {
+    // POST /api/manage?action=exec&user=USERNAME&secret=EXEC_SECRET
+    if (req.method === 'POST' && req.query.action === 'exec') {
+        // Reject if secret is wrong or missing — prevents fake ping spam
+        if (req.query.secret !== EXEC_SECRET)
+            return res.status(403).json({ ok: false, error: 'Invalid secret' });
+
+        const username = req.query.user;
+        if (!username) return res.status(400).json({ ok: false });
+
         const map = await getExecMap();
-        map[req.query.user] = Date.now();
+        map[username] = Date.now();
+        // Prune stale entries
         const now = Date.now();
         for (const [u, t] of Object.entries(map))
             if (now - t >= EXEC_TTL * 1000) delete map[u];
@@ -57,17 +73,23 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true });
     }
 
-    // GET /api/manage?action=check&user=USERNAME  (on script startup)
-    if (req.method === 'GET' && req.query.action === 'check' && req.query.user) {
+    // GET /api/manage?action=check&user=USERNAME&secret=EXEC_SECRET
+    if (req.method === 'GET' && req.query.action === 'check') {
+        if (req.query.secret !== EXEC_SECRET)
+            return res.status(403).json({ ok: false, error: 'Invalid secret' });
+
+        const username = req.query.user;
+        if (!username) return res.status(400).json({ ok: false });
+
         const [bans, wl] = await Promise.all([getBans(), getWl()]);
         return res.status(200).json({
             ok:          true,
-            banned:      bans.includes(req.query.user),
-            whitelisted: wl.includes(req.query.user),
+            banned:      bans.includes(username),
+            whitelisted: wl.includes(username),
         });
     }
 
-    // ── Admin routes — all need auth ─────────────────────────────────────────
+    // ── Admin routes — require admin password ─────────────────────────────────
 
     const auth = req.query.auth || (req.body && req.body.auth);
     if (auth !== ADMIN_PASS)
@@ -84,7 +106,7 @@ export default async function handler(req, res) {
         });
     }
 
-    // POST /api/manage  — admin mutations
+    // POST /api/manage  — admin mutations (ban/whitelist)
     if (req.method === 'POST') {
         let body = req.body || {};
         if (typeof body === 'string') {
@@ -99,6 +121,7 @@ export default async function handler(req, res) {
             const bans = await getBans();
             if (!bans.includes(username)) bans.push(username);
             await kvSet('ac_banned', bans);
+            // Kick them off the live list immediately
             const map = await getExecMap();
             delete map[username];
             await setExecMap(map);
