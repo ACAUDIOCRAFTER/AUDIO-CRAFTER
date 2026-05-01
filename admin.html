@@ -246,10 +246,12 @@ input::placeholder{color:#333}
   </nav>
 
   <div style="max-width:1200px;margin:0 auto;padding:28px 24px 0">
-    <div class="live-bar">
-      <span class="live-label">Live in-game</span>
+    <div class="live-bar" style="transition:border-color .4s">
+      <span class="live-label" style="display:flex;align-items:center;gap:7px">
+        <span id="lstatus" class="lstatus"></span>Live In-Game
+      </span>
       <div id="live-users" class="live-users"><span style="font-size:.85rem;color:#555">Polling...</span></div>
-      <div class="live-count"><div class="lstatus" id="lstatus"></div><span id="lcnt">0 online</span></div>
+      <div class="live-count"><span id="lcnt" style="font-size:.85rem;color:#666">0 online</span></div>
     </div>
     <div class="stats-row">
       <div class="stat"><div class="stat-val" style="color:#6699ff" id="st-tags">0</div><div class="stat-label">Tag Users</div></div>
@@ -632,7 +634,10 @@ function login(){
       document.getElementById('auth').style.display='none'
       document.getElementById('app').style.display='block'
       tagData=d.users||{}
-      loadManage();renderTags();setInterval(pollAll,5000)
+      loadManage();renderTags()
+      // Poll every 5s — and do an immediate live-users-only ping every 3s
+      setInterval(pollAll, 5000)
+      setInterval(pollLive, 3000)
       // Show token modal if no token saved yet
       if(!localStorage.getItem('ac_gh_token')){
         setTimeout(()=>showGhModal(),600)
@@ -690,6 +695,21 @@ async function pollAll(){
     updateStats();renderLive(execData);renderTags();renderBans();renderWl();renderExec()
   }catch{}
 }
+
+// Fast poll — only fetches live executing users (lightweight, every 3s)
+async function pollLive(){
+  if(!pass) return
+  try{
+    const r = await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}`)
+    const d = await r.json()
+    if(d.ok){
+      execData = d.executing || []
+      document.getElementById('st-live').textContent = execData.length
+      renderLive(execData)
+      renderExec()
+    }
+  }catch{}
+}
 function updateStats(){
   document.getElementById('st-tags').textContent=Object.keys(tagData).length
   document.getElementById('st-wl').textContent=wlData.length
@@ -698,8 +718,26 @@ function updateStats(){
 }
 function renderLive(users){
   const ul=document.getElementById('live-users'),dot=document.getElementById('lstatus'),cnt=document.getElementById('lcnt')
-  cnt.textContent=`${users.length} online`;dot.className='lstatus'+(users.length>0?' on':'')
-  ul.innerHTML=users.length?users.map(u=>`<span class="live-chip"><span class="ldot"></span>${u}</span>`).join(''):'<span style="font-size:.85rem;color:#555">No one executing right now</span>'
+  const n = users.length
+  cnt.textContent = n > 0 ? `${n} online` : `0 online`
+  dot.className = 'lstatus' + (n > 0 ? ' on' : '')
+  if(n > 0){
+    ul.innerHTML = users.map(u=>
+      `<span class="live-chip">
+        <span class="ldot"></span>
+        <span>${u}</span>
+        <span style="font-size:.7rem;opacity:.5;margin-left:2px">executing</span>
+      </span>`
+    ).join('')
+  } else {
+    ul.innerHTML = '<span style="font-size:.82rem;color:#333;font-style:italic">No one running the script right now</span>'
+  }
+  // Flash the live bar border when count changes
+  const bar = document.querySelector('.live-bar')
+  if(bar && n > 0){
+    bar.style.borderColor = 'rgba(0,255,136,.35)'
+    setTimeout(()=>bar.style.borderColor='', 800)
+  }
 }
 
 // ════════════════════════════════════════════════════════════
