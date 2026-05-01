@@ -190,6 +190,17 @@ input::placeholder{color:var(--dim2)}
           <div class="stat"><div class="stat-val" style="color:var(--green)" id="stat-pfp">0</div><div class="stat-label">With PFP</div></div>
           <div class="stat"><div class="stat-val" style="color:var(--accent2)" id="stat-bg">0</div><div class="stat-label">With BG</div></div>
         </div>
+        <!-- Online users row -->
+        <div id="online-bar" style="padding:12px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:600;letter-spacing:1px;color:var(--dim);text-transform:uppercase">Live in-game</span>
+          <div id="online-users" style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--dim2)">Polling...</span>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+            <div id="live-dot" style="width:7px;height:7px;border-radius:50%;background:var(--dim2)"></div>
+            <span id="live-count" style="font-size:11px;color:var(--dim)">0 online</span>
+          </div>
+        </div>
         <div class="panel-header">
           <span class="panel-title">Whitelisted Users</span>
           <input type="text" style="width:160px;padding:6px 10px;font-size:11px" placeholder="🔍 Search..." oninput="filterUsers(this.value)"/>
@@ -316,7 +327,7 @@ function renderUsers() {
     return `<div class="user-card">
       <div class="user-pfp">${pfpUrl ? `<img src="${pfpUrl}" onerror="this.style.display='none'"/>` : '👤'}</div>
       <div class="user-info"><div class="user-name">${username}</div><div class="user-meta">${u.pfpId||'No PFP'} · ${u.bgId||'No BG'}</div></div>
-      <div class="tag-pill">${u.tag}</div>
+      <div class="tag-pill">${u.tag || 'No Tag'}</div>
       <div class="user-actions">
         <button class="btn btn-secondary btn-sm" onclick="editUser('${username}')">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteUser('${username}')">✕</button>
@@ -330,6 +341,34 @@ function toast(msg, type) {
   el.textContent = msg; el.className = `show ${type||''}`
   setTimeout(() => el.className = '', 3500)
 }
+
+// ── Live online users — polls acusers.js every 5s
+async function pollOnline() {
+  try {
+    // Get the game job ID list from acusers API — we don't know the jobId
+    // so we just scan all ac_custom_users keys and check workspace via the script's AC_Exec_ system
+    // Instead: call our own API with action=online to get current executing users
+    const r = await fetch('/api/custom-users?action=online')
+    const d = await r.json()
+    const users = d.users || []
+    const dot   = document.getElementById('live-dot')
+    const count = document.getElementById('live-count')
+    const list  = document.getElementById('online-users')
+    count.textContent = `${users.length} online`
+    dot.style.background = users.length > 0 ? 'var(--green)' : 'var(--dim2)'
+    if (users.length === 0) {
+      list.innerHTML = '<span style="font-size:11px;color:var(--dim2)">No one executing right now</span>'
+    } else {
+      list.innerHTML = users.map(u => `
+        <span style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:99px;padding:3px 10px;font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>
+          ${u}
+        </span>`).join('')
+    }
+  } catch {}
+}
+pollOnline()
+setInterval(pollOnline, 5000)
 </script>
 </body>
 </html>
