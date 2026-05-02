@@ -69,8 +69,8 @@ export default async function handler(req, res) {
         const key=`ac_dm_inbox_${toId}`;
         const inbox=(await kvGet(key))||[];
         inbox.push({from,fromId,text,ts});
-        const cutoff=Date.now()-MSG_TTL_MS;
-        await kvSet(key, inbox.filter(m=>m.ts>cutoff/1000||m.ts>cutoff));
+        // Keep all DM messages forever (no deletion)
+        await kvSet(key, inbox);
         return res.status(200).json({ ok:true });
     }
 
