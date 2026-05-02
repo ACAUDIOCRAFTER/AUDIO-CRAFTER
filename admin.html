@@ -207,6 +207,7 @@ input::placeholder{color:#333}
       <button class="ntab" onclick="showPage('quickadd',this)">⚡ Quick Add</button>
       <button class="ntab" onclick="showPage('gifs',this)">🖼 GIFs</button>
       <button class="ntab" onclick="showPage('toggletags',this)">🏷 Tag Ctrl</button>
+      <button class="ntab" onclick="showPage('scriptusers',this)">👥 Script Users</button>
       <button class="ntab" onclick="resetGhToken()" title="Update GitHub Token" style="padding:7px 10px">🔑</button>
     </div>
   </nav>
@@ -465,6 +466,27 @@ input::placeholder{color:#333}
     </div>
   </div>
 
+  <!-- SCRIPT USERS PAGE — persistent growing list of everyone who ever ran the script -->
+  <div class="page" id="page-scriptusers">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-top" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="card-title">All-Time Script Users</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="su-count" style="font-size:.78rem;color:#555">Loading...</span>
+          <input class="search-input" placeholder="🔍 Search..." oninput="renderScriptUsers(this.value)" style="width:160px"/>
+          <button class="btn btn-ghost btn-sm" onclick="loadScriptUsers()">↺ Refresh</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:14px">
+        <div style="font-size:.75rem;color:#333;margin-bottom:12px;line-height:1.6">
+          Every player who has ever executed your script — grows over time, never shrinks.<br>
+          Green dot = currently online right now.
+        </div>
+        <div id="su-list" class="ulist" style="max-height:600px"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div class="version">AC AudioCrafter v3 — Admin Panel</div>
@@ -628,6 +650,7 @@ function showPage(id,btn){
   btn.classList.add('active')
   if(id==='gifs') loadDmGifs()
   if(id==='toggletags') loadTagToggleState()
+  if(id==='scriptusers') loadScriptUsers()
 }
 
 // ── Live polling — FIX: poll every 2s, show last-ping time ────────────────
@@ -644,6 +667,7 @@ async function pollLive(){
       execData=d.executing||[]
       document.getElementById('st-live').textContent=execData.length
       renderLive(execData);renderExec()
+      if(document.getElementById("page-scriptusers").classList.contains("active")) renderScriptUsers()
       const ping=Date.now()-start
       const pingEl=document.getElementById('live-ping')
       pingEl.textContent=ping+'ms'; pingEl.className='live-ping active'
@@ -977,6 +1001,62 @@ function renderTagToggleList(q=''){
         <button class="btn ${isHidden?'btn-green':'btn-red'} btn-sm" onclick="setTagHidden('${u}',${!isHidden})">
           ${isHidden?'Show':'Hide'}
         </button>
+      </div>
+    </div>`
+  }).join('')
+}
+
+
+// ── Script Users — persistent list ────────────────────────────────────────
+let scriptUsers = {}  // {username: {userId, displayName, firstSeen, lastSeen}}
+
+async function loadScriptUsers(){
+  try{
+    const r = await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}&_t=${Date.now()}`,{cache:'no-store'})
+    const d = await r.json()
+    if(d.ok){
+      scriptUsers = d.allUsers || {}
+      execData = d.executing || []
+      renderScriptUsers()
+      document.getElementById('su-count').textContent = `${Object.keys(scriptUsers).length} total users`
+    }
+  }catch{}
+}
+
+function renderScriptUsers(q=''){
+  const el = document.getElementById('su-list'); if(!el) return
+  const entries = Object.entries(scriptUsers)
+    .filter(([u])=>!q||u.toLowerCase().includes(q.toLowerCase()))
+    .sort((a,b)=>(b[1].lastSeen||0)-(a[1].lastSeen||0))  // most recent first
+
+  if(!entries.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">👥</div>No script users recorded yet</div>'
+    return
+  }
+
+  const now = Date.now()
+  el.innerHTML = entries.map(([username, info])=>{
+    const isOnline = execData.includes(username)
+    const lastSeen = info.lastSeen ? new Date(info.lastSeen).toLocaleString() : 'Unknown'
+    const firstSeen = info.firstSeen ? new Date(info.firstSeen).toLocaleDateString() : 'Unknown'
+    const pfp = `https://www.roblox.com/headshot-thumbnail/image?userId=${info.userId||0}&width=48&height=48&format=png`
+    return`<div class="urow" style="${isOnline?'border-color:rgba(0,255,136,.3);background:rgba(0,40,20,.15)':''}">
+      <div class="urow-icon">
+        <img src="${pfp}" onerror="this.src=''" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>
+      </div>
+      <div class="urow-info">
+        <div class="urow-name" style="display:flex;align-items:center;gap:7px">
+          ${isOnline?'<span style="width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88;flex-shrink:0"></span>':''}
+          ${username}
+          ${info.displayName && info.displayName !== username ? `<span style="font-size:.75rem;color:#666">(${info.displayName})</span>`:''}
+        </div>
+        <div class="urow-meta">
+          ID: ${info.userId||'—'} &nbsp;·&nbsp; First: ${firstSeen} &nbsp;·&nbsp; Last: ${lastSeen}
+        </div>
+      </div>
+      ${isOnline?'<span class="chip chip-live">ONLINE</span>':'<span class="chip" style="background:rgba(80,80,80,.15);border:1px solid #282828;color:#555">OFFLINE</span>'}
+      <div class="urow-actions">
+        <button class="btn btn-red btn-sm" onclick="quickBan('${username}')">🚫</button>
       </div>
     </div>`
   }).join('')
