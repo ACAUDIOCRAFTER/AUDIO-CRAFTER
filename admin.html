@@ -635,22 +635,13 @@ async function pollLive(){
   if(!pass) return
   const start=Date.now()
   try{
-    // Read from tags API — it uses persistent KV storage so online status survives
-    // between Vercel serverless invocations (manage API memory does not)
-    const r=await fetch(`${TAGS_API}?auth=${encodeURIComponent(pass)}&_t=${start}`, {
+    const r=await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}&_t=${start}`, {
       cache: 'no-store',
       headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
     })
     const d=await r.json()
     if(d.ok){
-      tagData=d.users||{}
-      // online = map of {username: {lastSeen: timestamp}}
-      // filter to users seen within last 15s
-      const now=Date.now()
-      const onlineMap=d.online||{}
-      execData=Object.entries(onlineMap)
-        .filter(([u,v])=>(now-(v.lastSeen||0))<15000)
-        .map(([u])=>u)
+      execData=d.executing||[]
       document.getElementById('st-live').textContent=execData.length
       renderLive(execData);renderExec()
       const ping=Date.now()-start
