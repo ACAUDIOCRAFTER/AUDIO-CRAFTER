@@ -80,7 +80,10 @@ export default async function handler(req, res) {
         const toId=q.toId||bod.toId;
         if (!toId) return res.status(400).json({ ok:false });
         const inbox=(await kvGet(`ac_dm_inbox_${toId}`))||[];
-        return res.status(200).json({ ok:true, messages:inbox });
+        const typing=(await kvGet(`ac_dm_typing_${toId}`))||[];
+        const now=Date.now();
+        const activeTyping=typing.filter(t=>now-t.ts<5000);
+        return res.status(200).json({ ok:true, messages:inbox, typing:activeTyping });
     }
 
     // ── gc_send — global chat ─────────────────────────────────────────────────
@@ -101,7 +104,37 @@ export default async function handler(req, res) {
         if (secret !== EXEC_SECRET) return res.status(403).json({ ok:false, error:'Invalid secret' });
         const since=Number(q.since||0);
         const msgs=(await kvGet('ac_global_chat'))||[];
-        return res.status(200).json({ ok:true, messages: msgs.filter(m=>m.ts>since) });
+        const gcTyping=(await kvGet('ac_gc_typing'))||[];
+        const gcNow=Date.now();
+        return res.status(200).json({ ok:true, messages: msgs.filter(m=>m.ts>since), typing:gcTyping.filter(t=>gcNow-t.ts<5000) });
+    }
+
+
+    // ── dm_typing — user is typing in a DM ───────────────────────────────────
+    if (action === 'dm_typing') {
+        if (secret !== EXEC_SECRET) return res.status(403).json({ ok:false });
+        const from=q.from, fromId=q.fromId, toId=q.toId;
+        if (!from||!fromId||!toId) return res.status(400).json({ ok:false });
+        const key=`ac_dm_typing_${toId}`;
+        const typing=(await kvGet(key))||[];
+        const now=Date.now();
+        const filtered=typing.filter(t=>t.fromId!==fromId&&now-t.ts<5000);
+        filtered.push({from,fromId,ts:now});
+        await kvSet(key,filtered);
+        return res.status(200).json({ ok:true });
+    }
+
+    // ── gc_typing — user is typing in global chat ─────────────────────────────
+    if (action === 'gc_typing') {
+        if (secret !== EXEC_SECRET) return res.status(403).json({ ok:false });
+        const from=q.from||bod.from, fromId=q.fromId||bod.fromId;
+        if (!from) return res.status(400).json({ ok:false });
+        const typing=(await kvGet('ac_gc_typing'))||[];
+        const now=Date.now();
+        const filtered=typing.filter(t=>t.fromId!==fromId&&now-t.ts<5000);
+        filtered.push({from,fromId,ts:now});
+        await kvSet('ac_gc_typing',filtered);
+        return res.status(200).json({ ok:true });
     }
 
     // ── ban/whitelist check ───────────────────────────────────────────────────
