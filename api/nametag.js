@@ -1,5 +1,4 @@
 import { Octokit } from "@octokit/rest";
-
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = "ACAUDIOCRAFTER";
 const REPO  = "AUDIO-CRAFTER";
@@ -49,14 +48,12 @@ export default async function handler(req, res) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "*");
-
     if (req.method === "OPTIONS") return res.status(200).end();
 
     try {
         const clientSecret = req.headers["x-secret"]
             || req.headers["X-Secret"]
             || req.query.secret;
-
         if (!clientSecret || clientSecret !== SECRET) {
             return res.status(401).json({ error: "Unauthorized" });
         }
@@ -73,20 +70,31 @@ export default async function handler(req, res) {
         if (method === "POST") {
             let body = req.body;
             if (typeof body === "string") { try { body = JSON.parse(body); } catch(e) {} }
-            const { userId, displayName, tag, executed, forceTag } = body || {};
+
+            const { userId, displayName, tag, executed, forceTag, pfp, bg, glowColor, effects } = body || {};
             if (!userId) return res.status(400).json({ error: "Missing userId" });
 
             const { content, sha } = await getFile();
-            const existing = content[userId];
+            const existing = content[userId] || {};
 
-            const newExecuted = executed !== undefined ? executed : (existing?.executed || false);
-            const newTag = (forceTag && tag) ? tag : (existing ? existing.tag : (tag || "SCOPER USER"));
-            const newDisplayName = existing ? existing.displayName : (displayName || userId);
+            const newExecuted    = executed    !== undefined ? executed    : (existing.executed    || false);
+            const newTag         = (forceTag && tag) ? tag : (existing.tag || tag || "SCOPER USER");
+            const newDisplayName = existing.displayName || displayName || userId;
+
+            // Always preserve existing image/style fields — only overwrite if explicitly provided in this request
+            const newPfp        = pfp        !== undefined ? pfp        : (existing.pfp        || null);
+            const newBg         = bg         !== undefined ? bg         : (existing.bg         || null);
+            const newGlowColor  = glowColor  !== undefined ? glowColor  : (existing.glowColor  || null);
+            const newEffects    = effects    !== undefined ? effects    : (existing.effects    || null);
 
             const nothingChanged = existing
-                && existing.executed === newExecuted
-                && existing.tag === newTag
-                && existing.displayName === newDisplayName;
+                && existing.executed    === newExecuted
+                && existing.tag         === newTag
+                && existing.displayName === newDisplayName
+                && existing.pfp         === newPfp
+                && existing.bg          === newBg
+                && existing.glowColor   === newGlowColor
+                && existing.effects     === newEffects;
 
             if (nothingChanged) {
                 return res.json({ ok: true, skipped: true });
@@ -94,9 +102,13 @@ export default async function handler(req, res) {
 
             content[userId] = {
                 displayName: newDisplayName,
-                tag: newTag,
-                executed: newExecuted,
-                updatedAt: new Date().toISOString()
+                tag:         newTag,
+                executed:    newExecuted,
+                pfp:         newPfp,
+                bg:          newBg,
+                glowColor:   newGlowColor,
+                effects:     newEffects,
+                updatedAt:   new Date().toISOString()
             };
 
             await saveFile(content, sha);
@@ -104,7 +116,6 @@ export default async function handler(req, res) {
         }
 
         return res.status(405).json({ error: "Method not allowed" });
-
     } catch (err) {
         return res.status(500).json({ error: err.message });
     }
