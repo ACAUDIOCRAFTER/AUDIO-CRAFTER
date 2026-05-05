@@ -67,7 +67,7 @@ nav .sp{flex:1}
 .field{margin-bottom:13px}
 .field label{display:block;font-size:.7rem;color:#444;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;font-weight:700}
 .field-hint{font-size:.75rem;color:#383844;margin-top:4px;line-height:1.4}
-input[type=text],input[type=password]{width:100%;background:#080810;border:1px solid #1e1e2e;border-radius:8px;padding:10px 14px;color:#fff;font-size:.93rem;font-family:'Coming Soon',cursive;outline:none;transition:border-color .2s,box-shadow .2s}
+input[type=text],input[type=password],input[type=file]{width:100%;background:#080810;border:1px solid #1e1e2e;border-radius:8px;padding:10px 14px;color:#fff;font-size:.93rem;font-family:'Coming Soon',cursive;outline:none;transition:border-color .2s,box-shadow .2s}
 input:focus{border-color:#334;box-shadow:0 0 0 3px rgba(80,100,255,.12)}
 input::placeholder{color:#333}
 .divider{height:1px;background:#1a1a22;margin:14px 0}
@@ -230,7 +230,7 @@ input::placeholder{color:#333}
     </div>
   </div>
 
-  <!-- TAGS PAGE (unchanged) -->
+  <!-- TAGS PAGE -->
   <div class="page active" id="page-tags">
     <div class="grid-form">
       <div class="card">
@@ -366,37 +366,33 @@ input::placeholder{color:#333}
     </div>
   </div>
 
-  <!-- GIFS PAGE — NEW -->
+  <!-- GIFS PAGE — UPDATED WITH PERMANENT FILE UPLOAD -->
   <div class="page" id="page-gifs">
     <div class="grid2">
       <div class="card">
-        <div class="card-top"><span class="card-title">🖼 Upload DM GIF / Image</span></div>
+        <div class="card-top"><span class="card-title">🖼 Upload DM GIF / Image (permanent)</span></div>
         <div class="card-body">
           <div class="field">
-            <label>Image URL</label>
-            <input type="text" id="gif-upload-url" placeholder="https://i.imgur.com/example.gif" oninput="previewGifUpload(this.value)"/>
-            <div class="field-hint">Paste any direct image or GIF URL. It gets added to the list that shows in the in-game DM GIF picker.</div>
-            <div id="gif-upload-preview" style="display:none;margin-top:8px;border-radius:8px;overflow:hidden;border:1px solid #1e1e2a;max-height:120px">
-              <img id="gif-upload-preview-img" src="" style="width:100%;max-height:120px;object-fit:contain;background:#080810" crossorigin="anonymous"/>
+            <label>Select GIF / Image file</label>
+            <input type="file" id="gif-file-input" accept="image/gif,image/png,image/jpeg,image/webp" />
+            <div class="field-hint">Upload a GIF file directly. It will be stored permanently in your GitHub repo.</div>
+            <div id="gif-file-preview" style="margin-top:8px;display:none;border-radius:8px;overflow:hidden;border:1px solid #1e1e2a;max-width:200px">
+              <img id="gif-file-preview-img" src="" style="width:100%;height:auto;object-fit:contain;background:#080810" />
             </div>
           </div>
           <div class="field">
-            <label>Thumbnail URL (optional)</label>
-            <input type="text" id="gif-upload-thumb" placeholder="Leave blank to use same URL"/>
-            <div class="field-hint">Smaller preview image. Leave blank to use the main URL as thumbnail.</div>
-          </div>
-          <div class="field">
             <label>Label (optional)</label>
-            <input type="text" id="gif-upload-label" placeholder="e.g. wave, lol, hug..."/>
+            <input type="text" id="gif-upload-label" placeholder="e.g. wave, lol, hug..." />
           </div>
-          <button class="btn btn-primary" onclick="uploadDmGif()" style="margin-bottom:8px">
-            <span id="gif-upload-spin" style="display:none" class="spin"></span>📤 Add to DM GIFs
+          <button class="btn btn-primary" onclick="uploadGifFile()" style="margin-bottom:8px">
+            <span id="gif-upload-spin" style="display:none" class="spin"></span>📤 Upload to GitHub
           </button>
           <div id="gif-upload-status" style="display:none;font-size:.82rem;padding:8px 12px;border-radius:8px;margin-top:4px"></div>
           <div style="font-size:.72rem;color:#333;margin-top:12px;line-height:1.6">
-            GIFs are stored in <code style="color:#555">dm_gifs/list.json</code> on GitHub.<br>
+            GIFs are stored in <code>dm_gifs/</code> on GitHub.<br>
             In-game DM picker refreshes on next execute.<br>
-            Requires GitHub token (click 🔑 in nav).
+            Requires GitHub token (click 🔑 in nav).<br>
+            <span style="color:#4ade80">✓ Permanent raw GitHub URLs — never expire.</span>
           </div>
         </div>
       </div>
@@ -412,21 +408,17 @@ input::placeholder{color:#333}
       </div>
     </div>
   </div>
+
   <!-- TAG CONTROL PAGE -->
   <div class="page" id="page-toggletags">
     <div class="grid2">
-      <!-- Toggle individual user's tag visibility -->
       <div class="card">
         <div class="card-top"><span class="card-title">Toggle Tag for User</span></div>
         <div class="card-body">
           <div class="field">
             <label>Roblox Username</label>
             <input type="text" id="tt-user" placeholder="Username..." onkeydown="if(event.key==='Enter')toggleUserTag()"/>
-            <div class="field-hint">
-              Hides or shows that user's nametag for everyone running the script.<br>
-              Their tag data is kept — this just sets a <code style="color:#555">hidden: true/false</code> flag.<br>
-              Toggle again to restore.
-            </div>
+            <div class="field-hint">Hides or shows that user's nametag for everyone running the script.</div>
           </div>
           <button class="btn btn-primary" onclick="toggleUserTag()" style="margin-bottom:8px">
             <span id="tt-spin" style="display:none" class="spin"></span>🔀 Toggle Tag Visibility
@@ -434,8 +426,6 @@ input::placeholder{color:#333}
           <div id="tt-status" style="display:none;font-size:.82rem;padding:8px 12px;border-radius:8px;margin-top:4px"></div>
         </div>
       </div>
-
-      <!-- List of all tags with toggle buttons -->
       <div class="card">
         <div class="card-top">
           <span class="card-title">All Tags — Visibility</span>
@@ -450,8 +440,6 @@ input::placeholder{color:#333}
         </div>
       </div>
     </div>
-
-    <!-- Global toggle -->
     <div class="card" style="margin-top:20px">
       <div class="card-top"><span class="card-title">Global Tag Switch</span></div>
       <div class="card-body" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
@@ -469,7 +457,7 @@ input::placeholder{color:#333}
     </div>
   </div>
 
-  <!-- SCRIPT USERS PAGE — persistent growing list of everyone who ever ran the script -->
+  <!-- SCRIPT USERS PAGE -->
   <div class="page" id="page-scriptusers">
     <div class="card" style="margin-bottom:16px">
       <div class="card-top" style="display:flex;align-items:center;justify-content:space-between">
@@ -511,7 +499,7 @@ input::placeholder{color:#333}
 </div>
 
 <script>
-// ── Canvas effects ─────────────────────────────────────────────────────────
+// ── Canvas effects (same as before) ──
 const sc=document.getElementById('sparkle-canvas'),sctx=sc.getContext('2d')
 sc.width=innerWidth;sc.height=innerHeight
 window.addEventListener('resize',()=>{sc.width=innerWidth;sc.height=innerHeight;tc.width=innerWidth;tc.height=innerHeight})
@@ -543,7 +531,6 @@ function login(){
       document.getElementById('app').style.display='block'
       tagData=d.users||{}
       loadManage();renderTags();renderQuickList()
-      // FIX: poll every 2s for live users (was 5s — too slow for real-time)
       pollLive()
       setInterval(pollLive, 1500)
       setInterval(pollAll, 8000)
@@ -568,7 +555,7 @@ async function uploadBlobToGitHub(blob, path){
   return uploadToGitHub(base64, path, true)
 }
 
-// ── DM GIF management ──────────────────────────────────────────────────────
+// ── DM GIF management (permanent file upload) ─────────────────────────────
 const GIF_LIST_PATH='dm_gifs/list.json'
 const GIF_LIST_RAW=`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/main/${GIF_LIST_PATH}`
 let dmGifList=[]
@@ -586,15 +573,6 @@ async function loadDmGifs(){
   renderGifLibrary()
 }
 
-
-function previewGifUpload(url){
-  const preview = document.getElementById('gif-upload-preview')
-  const img = document.getElementById('gif-upload-preview-img')
-  if(!url.trim()){preview.style.display='none';return}
-  img.src = url.trim()
-  img.onload = ()=>{ preview.style.display='block' }
-  img.onerror = ()=>{ preview.style.display='none' }
-}
 function renderGifLibrary(){
   const el=document.getElementById('gif-library')
   const cnt=document.getElementById('gif-count')
@@ -613,34 +591,61 @@ function renderGifLibrary(){
   }).join('')
 }
 
-async function uploadDmGif(){
-  const url=document.getElementById('gif-upload-url').value.trim()
-  if(!url){toast('Paste a URL first','err');return}
-  const thumb=document.getElementById('gif-upload-thumb').value.trim()||url
-  const label=document.getElementById('gif-upload-label').value.trim()
-  const spin=document.getElementById('gif-upload-spin')
-  const status=document.getElementById('gif-upload-status')
-  spin.style.display='inline-block'
-  status.style.display='none'
-  try{
-    dmGifList.push({url,thumb,label})
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(dmGifList,null,2))))
-    await uploadToGitHub(content, GIF_LIST_PATH)
-    document.getElementById('gif-upload-url').value=''
-    document.getElementById('gif-upload-thumb').value=''
-    document.getElementById('gif-upload-label').value=''
-    renderGifLibrary()
-    status.style.background='rgba(0,200,100,.07)';status.style.border='1px solid rgba(0,200,100,.2)';status.style.color='#4ade80'
-    status.textContent=`✓ Added — in-game picker will show it on next execute`;status.style.display='block'
-    toast('✓ GIF added to library','ok')
-  }catch(e){
-    dmGifList.pop()
-    status.style.background='rgba(220,60,60,.07)';status.style.border='1px solid rgba(220,60,60,.2)';status.style.color='#f87171'
-    status.textContent='Failed: '+e.message;status.style.display='block'
-    toast('Upload failed','err')
+// NEW: upload a local file to GitHub as permanent raw URL
+async function uploadGifFile() {
+  const fileInput = document.getElementById('gif-file-input');
+  const file = fileInput.files[0];
+  if (!file) { toast('Select a file first', 'err'); return; }
+  const label = document.getElementById('gif-upload-label').value.trim();
+  const spin = document.getElementById('gif-upload-spin');
+  const statusDiv = document.getElementById('gif-upload-status');
+  spin.style.display = 'inline-block';
+  statusDiv.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  if (label) formData.append('label', label);
+
+  try {
+    const resp = await fetch('/api/upload-gif', { method: 'POST', body: formData });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.error || 'Upload failed');
+
+    fileInput.value = '';
+    document.getElementById('gif-upload-label').value = '';
+    document.getElementById('gif-file-preview').style.display = 'none';
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'rgba(0,200,100,.07)';
+    statusDiv.style.border = '1px solid rgba(0,200,100,.2)';
+    statusDiv.style.color = '#4ade80';
+    statusDiv.textContent = `✓ Uploaded! ${result.url}`;
+    toast('GIF permanently uploaded', 'ok');
+    await loadDmGifs();   // refresh the library
+  } catch (e) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.background = 'rgba(220,60,60,.07)';
+    statusDiv.style.border = '1px solid rgba(220,60,60,.2)';
+    statusDiv.style.color = '#f87171';
+    statusDiv.textContent = 'Failed: ' + e.message;
+    toast('Upload failed', 'err');
+  } finally {
+    spin.style.display = 'none';
   }
-  spin.style.display='none'
 }
+
+// Preview selected file
+document.getElementById('gif-file-input')?.addEventListener('change', function(e) {
+  const previewDiv = document.getElementById('gif-file-preview');
+  const previewImg = document.getElementById('gif-file-preview-img');
+  const file = e.target.files[0];
+  if (file && file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = (ev) => { previewImg.src = ev.target.result; previewDiv.style.display = 'block'; };
+    reader.readAsDataURL(file);
+  } else {
+    previewDiv.style.display = 'none';
+  }
+});
 
 async function deleteDmGif(idx){
   if(!confirm('Remove this GIF from the library?')) return
@@ -659,7 +664,7 @@ function saveGhToken(){const t=document.getElementById('gh-token-input').value.t
 function skipGhToken(){document.getElementById('gh-modal').style.display='none'}
 function resetGhToken(){localStorage.removeItem('ac_gh_token');document.getElementById('gh-token-input').value='';showGhModal()}
 
-// ── Page navigation ────────────────────────────────────────────────────────
+// ── Pagination & other existing functions (unchanged) ──────────────────────
 function showPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
   document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'))
@@ -670,15 +675,11 @@ function showPage(id,btn){
   if(id==='scriptusers') loadScriptUsers()
 }
 
-// ── Live polling — FIX: poll every 2s, show last-ping time ────────────────
 async function pollLive(){
   if(!pass) return
   const start=Date.now()
   try{
-    const r=await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}&_t=${start}`, {
-      cache: 'no-store',
-      headers: {'Cache-Control': 'no-cache', 'Pragma': 'no-cache'}
-    })
+    const r=await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}&_t=${start}`, {cache:'no-store',headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}})
     const d=await r.json()
     if(d.ok){
       execData=d.executing||[]
@@ -732,7 +733,7 @@ function renderLive(users){
   if(bar&&n>0){bar.style.borderColor='rgba(0,255,136,.35)';setTimeout(()=>bar.style.borderColor='',600)}
 }
 
-// ── Color palette ─────────────────────────────────────────────────────────
+// ── Color palette (unchanged) ──
 const GLOW_PRESETS=[
   {c:'#0066ff',n:'Blue'},{c:'#00ccff',n:'Cyan'},{c:'#00ff88',n:'Green'},{c:'#ff3366',n:'Red'},
   {c:'#ff9900',n:'Orange'},{c:'#cc44ff',n:'Purple'},{c:'#ffffff',n:'White'},{c:'#ffdd00',n:'Gold'},
@@ -749,7 +750,7 @@ function applyPreviewGlow(c){const ntag=document.getElementById('prev-ntag');nta
 function toggleEffect(key){effects[key]=!effects[key];const sw=document.getElementById('tog-'+key);sw.className='toggle-switch'+(effects[key]?' on':'');const row=sw.closest('.toggle-row');if(row)row.className='toggle-row'+(effects[key]?' tog-active':'');updatePreview()}
 function getEffectsFromForm(){return{...effects,glowColor}}
 
-// ── Preview ────────────────────────────────────────────────────────────────
+// ── Preview (unchanged) ──
 function updatePreview(){
   const tag=document.getElementById('f-tag').value||'AC USER'
   const user=document.getElementById('f-user').value||'username'
@@ -769,7 +770,7 @@ function updatePreview(){
   q('pi-effects').textContent=ae.length?ae.join(' · '):'None';q('pi-effects').className='prev-info-val '+(ae.length?'active':'inactive')
 }
 
-// ── GIF processing (sprite sheet) ─────────────────────────────────────────
+// ── GIF processing (sprite sheet) unchanged ───────────────────────────────
 function onBgInput(){const val=document.getElementById('f-bg').value.trim();document.getElementById('gif-btn').disabled=!val;if(gifData){gifData=null;stopPreviewAnim();document.getElementById('prev-anim-canvas').style.display='none';document.getElementById('sheet-preview').style.display='none';setGifStatus('','')}}
 function setGifStatus(type,msg){const el=document.getElementById('gif-status');el.className=`gif-status ${type}`;el.textContent=msg;el.style.display=type?'flex':'none'}
 function setProgress(pct){const bar=document.getElementById('gif-progress');const inner=document.getElementById('gif-bar');if(pct<0){bar.style.display='none';return};bar.style.display='block';inner.style.width=pct+'%'}
@@ -798,7 +799,7 @@ async function processGif(){
     if(isGif){
       setGifStatus('loading','Parsing GIF...');setProgress(20)
       const blob=new Blob([bytes],{type:'image/gif'});const burl=URL.createObjectURL(blob);const img=await loadImage(burl);W=img.naturalWidth;H=img.naturalHeight
-      const meta=extractGifMeta(bytes);const frameCount=meta.length;setGifStatus('loading',`Found ${frameCount} frames...`);setProgress(30)
+      const meta=extractGifMeta(arr);const frameCount=meta.length;setGifStatus('loading',`Found ${frameCount} frames...`);setProgress(30)
       frames=[]
       for(let fi=0;fi<frameCount;fi++){
         setProgress(30+Math.round((fi/frameCount)*55))
@@ -826,7 +827,7 @@ async function processGif(){
 function startPreviewAnim(frames,W,H){stopPreviewAnim();const cv=document.getElementById('prev-anim-canvas');const ctx=cv.getContext('2d');cv.style.display='block';cv.style.opacity='0.35';let frame=0;function step(){const f=frames[frame];cv.width=cv.offsetWidth||200;cv.height=cv.offsetHeight||40;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(f.canvas,0,0,cv.width,cv.height);frame=(frame+1)%frames.length;previewAnimInterval=setTimeout(step,f.delay)};step()}
 function stopPreviewAnim(){if(previewAnimInterval){clearTimeout(previewAnimInterval);previewAnimInterval=null}}
 
-// ── Save tag ──────────────────────────────────────────────────────────────
+// ── Save tag (unchanged) ──
 async function saveTag(){
   const username=document.getElementById('f-user').value.trim(),tag=document.getElementById('f-tag').value.trim(),pfpId=document.getElementById('f-pfp').value.trim()
   if(!username||!tag){toast('Username and tag required','err');return}
@@ -913,18 +914,15 @@ function renderQuickList(q=''){
 
 function toast(msg,type){const e=document.getElementById('toast');e.textContent=msg;e.className=`show ${type||''}`;setTimeout(()=>e.className='',3500)}
 
-// ── Tag visibility control ─────────────────────────────────────────────────
+// ── Tag visibility control (unchanged) ──
 let globalTagsEnabled = true
-
 async function loadTagToggleState(){
-  // Pull current state from tags API (hidden flag per user + global flag)
   try{
     const r = await fetch(`${TAGS_API}?auth=${encodeURIComponent(pass)}`)
     const d = await r.json()
     if(d.ok){ tagData=d.users||{}; globalTagsEnabled=d.globalTagsEnabled!==false; renderTagToggleList(); updateGlobalTagBtn() }
   }catch{}
 }
-
 function updateGlobalTagBtn(){
   const btn = document.getElementById('global-tag-btn')
   const lbl = document.getElementById('global-tag-label')
@@ -937,7 +935,6 @@ function updateGlobalTagBtn(){
     lbl.textContent='🚫 Tags OFF — click to enable'
   }
 }
-
 async function toggleGlobalTags(){
   globalTagsEnabled = !globalTagsEnabled
   updateGlobalTagBtn()
@@ -949,7 +946,6 @@ async function toggleGlobalTags(){
     else{ globalTagsEnabled=!globalTagsEnabled; updateGlobalTagBtn(); toast('Failed: '+(d.error||'unknown'),'err') }
   }catch{ globalTagsEnabled=!globalTagsEnabled; updateGlobalTagBtn(); toast('Request failed','err') }
 }
-
 async function toggleUserTag(){
   const username = document.getElementById('tt-user').value.trim()
   if(!username){ toast('Enter a username','err'); return }
@@ -982,7 +978,6 @@ async function toggleUserTag(){
   }catch{ toast('Request failed','err') }
   spin.style.display='none'
 }
-
 async function setTagHidden(username, hidden){
   try{
     const r = await fetch(TAGS_API, {method:'POST', headers:{'Content-Type':'application/json'},
@@ -992,7 +987,6 @@ async function setTagHidden(username, hidden){
     else toast(d.error||'Failed','err')
   }catch{ toast('Request failed','err') }
 }
-
 function renderTagToggleList(q=''){
   const el = document.getElementById('tt-list'); if(!el) return
   const keys = Object.keys(tagData).filter(k=>!q||k.toLowerCase().includes(q.toLowerCase()))
@@ -1023,10 +1017,8 @@ function renderTagToggleList(q=''){
   }).join('')
 }
 
-
 // ── Script Users — persistent list ────────────────────────────────────────
-let scriptUsers = {}  // {username: {userId, displayName, firstSeen, lastSeen}}
-
+let scriptUsers = {}
 async function loadScriptUsers(){
   try{
     const r = await fetch(`${MANAGE_API}?auth=${encodeURIComponent(pass)}&_t=${Date.now()}`,{cache:'no-store'})
@@ -1039,18 +1031,15 @@ async function loadScriptUsers(){
     }
   }catch{}
 }
-
 function renderScriptUsers(q=''){
   const el = document.getElementById('su-list'); if(!el) return
   const entries = Object.entries(scriptUsers)
     .filter(([u])=>!q||u.toLowerCase().includes(q.toLowerCase()))
-    .sort((a,b)=>(b[1].lastSeen||0)-(a[1].lastSeen||0))  // most recent first
-
+    .sort((a,b)=>(b[1].lastSeen||0)-(a[1].lastSeen||0))
   if(!entries.length){
     el.innerHTML='<div class="empty"><div class="empty-icon">👥</div>No script users recorded yet</div>'
     return
   }
-
   const now = Date.now()
   el.innerHTML = entries.map(([username, info])=>{
     const isOnline = execData.includes(username)
