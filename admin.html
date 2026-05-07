@@ -534,7 +534,7 @@ document.addEventListener('mousemove',e=>pts.push({x:e.clientX,y:e.clientY,t:Dat
 ;(function drawTrail(){tctx.clearRect(0,0,tc.width,tc.height);const now=Date.now();for(let j=pts.length-1;j>=0;j--){if(now-pts[j].t>900){pts.splice(j,1);continue};if(j>0){const age=(now-pts[j].t)/900;tctx.beginPath();tctx.moveTo(pts[j-1].x,pts[j-1].y);tctx.lineTo(pts[j].x,pts[j].y);tctx.strokeStyle=`rgba(100,150,255,${(1-age)*.6})`;tctx.lineWidth=2;tctx.stroke()}};requestAnimationFrame(drawTrail)})()
 
 // ── Config ──
-const TAGS_API='/api/custom-users', MANAGE_API='/api/manage'
+const TAGS_API='https://audio-crafter.vercel.app/api/custom-users', MANAGE_API='https://audio-crafter.vercel.app/api/manage'
 let pass='', tagData={}, banData=[], wlData=[], execData=[]
 
 const GH={
